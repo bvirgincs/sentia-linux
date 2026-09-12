@@ -15,4 +15,5 @@ lb config noauto \
   --mirror-binary-security https://deb.debian.org/debian-security \
   --security true \
   --updates true \
-  --checksums sha256
+  --checksums sha256 \
+  --bootappend-live "boot=live components quiet splash console=tty0 console=ttyS0,115200"

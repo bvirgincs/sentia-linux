@@ -33,10 +33,23 @@ fi
 serial_log="${vm_run_dir}/serial.log"
 rm -f "${serial_log}"
 
+# KVM where the host provides it; TCG is a correctness fallback, not a
+# performance-representative run.
+if [[ -r /dev/kvm && -w /dev/kvm ]]; then
+  accel="kvm"
+  cpu_model="host"
+  boot_timeout="${SENTIA_ISO_BOOT_TIMEOUT:-180}"
+else
+  accel="tcg"
+  cpu_model="max"
+  boot_timeout="${SENTIA_ISO_BOOT_TIMEOUT:-900}"
+fi
+log "smoke boot acceleration: ${accel}"
+
 set +e
-run_heavy "qemu TCG ISO smoke boot" timeout 180s qemu-system-x86_64 \
-  -machine q35,accel=tcg \
-  -cpu max \
+run_heavy "qemu ISO smoke boot (${accel})" timeout "${boot_timeout}s" qemu-system-x86_64 \
+  -machine "q35,accel=${accel}" \
+  -cpu "${cpu_model}" \
   -smp 2 \
   -m 4096 \
   -name sentia-iso-smoke \
@@ -55,10 +68,32 @@ if [[ "${qemu_rc}" -ne 0 && "${qemu_rc}" -ne 124 ]]; then
   die "QEMU smoke boot failed with exit code ${qemu_rc}; see ${serial_log}"
 fi
 
+# A timeout on its own proves nothing: the guest could have panicked or sat at
+# the firmware. Require evidence from the serial console that the live system
+# actually reached the graphical target.
+require_file "${serial_log}"
+declare -A boot_evidence=(
+  ["kernel reached userspace"]="systemd\[1\]"
+  ["live filesystem mounted"]="Reached target"
+  ["display manager started"]="[Ll]ight[Dd][Mm]"
+  ["graphical target reached"]="Reached target Graphical Interface|Reached target graphical.target"
+)
+missing_evidence=()
+for evidence in "${!boot_evidence[@]}"; do
+  grep -Eq "${boot_evidence[${evidence}]}" "${serial_log}" || missing_evidence+=("${evidence}")
+done
+if [[ "${#missing_evidence[@]}" -gt 0 ]]; then
+  echo "--- last 60 serial lines ---" >&2
+  tail -n 60 "${serial_log}" >&2
+  die "ISO boot evidence missing: ${missing_evidence[*]}; see ${serial_log}"
+fi
+log "ISO boot evidence found for all ${#boot_evidence[@]} checks"
+
 {
   echo "generated_at=$(timestamp_utc)"
   echo "iso_path=${iso_path}"
   echo "qemu_exit_code=${qemu_rc}"
+  echo "accel=${accel}"
   echo "serial_log=${serial_log}"
 } | write_atomic "${MANIFEST_DIR}/test-iso.txt"
 
