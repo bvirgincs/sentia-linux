@@ -1,0 +1,7 @@
+sentia-llama-cpp (0.4.0+git5266f24-1) unstable; urgency=medium
+
+  * Package pinned llama.cpp runtime for local CPU inference.
+  * Enable dynamic backend dispatch with CPU all variants.
+  * Install Sentia local systemd runtime units and defaults.
+
+ -- Sentia Maintainers <maintainers@sentia.local>  Sat, 12 Sep 2026 00:00:00 +0000

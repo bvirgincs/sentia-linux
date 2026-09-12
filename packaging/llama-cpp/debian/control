@@ -1,0 +1,26 @@
+Source: sentia-llama-cpp
+Section: utils
+Priority: optional
+Maintainer: Sentia Maintainers <maintainers@sentia.local>
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+ ninja-build,
+ g++,
+ make,
+ pkgconf,
+ python3
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/ggml-org/llama.cpp
+
+Package: sentia-llama-cpp
+Architecture: amd64
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends: sentia-granite-model
+Description: Local CPU llama.cpp runtime for Sentia
+ Native local inference runtime package for Sentia Linux.
+ .
+ This package configures llama.cpp for portable CPU execution with dynamic
+ backend dispatch and multiple CPU variants, while keeping local model serving
+ constrained to a private Unix socket service profile.

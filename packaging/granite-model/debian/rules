@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+MODEL_STAGE ?= /home/ubuntu/sentia-linux/artifacts/downloads/granite-model
+MODEL_FILE := $(MODEL_STAGE)/granite-4.2-3b-Q4_K_M.gguf
+MODEL_SIG := $(MODEL_STAGE)/model.sig
+MODEL_CARD := $(MODEL_STAGE)/README.md
+TREE_JSON := $(MODEL_STAGE)/tree.json
+VERIFY_REPORT := $(CURDIR)/debian/model-verification.json
+MODEL_DEST := $(CURDIR)/debian/sentia-granite-model/usr/share/sentia/models/granite-4.2-3b
+DOC_DEST := $(CURDIR)/debian/sentia-granite-model/usr/share/doc/sentia-granite-model
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	python3 ../../build/runtime/verify_granite_model.py \
+	 --model "$(MODEL_FILE)" \
+	 --sig "$(MODEL_SIG)" \
+	 --readme "$(MODEL_CARD)" \
+	 --tree-json "$(TREE_JSON)" \
+	 --report "$(VERIFY_REPORT)"
+
+override_dh_auto_install:
+	install -d "$(MODEL_DEST)" "$(DOC_DEST)"
+	install -m 0644 "$(MODEL_FILE)" "$(MODEL_DEST)/granite-4.2-3b-Q4_K_M.gguf"
+	install -m 0644 "$(MODEL_SIG)" "$(MODEL_DEST)/model.sig"
+	install -m 0644 "$(MODEL_CARD)" "$(MODEL_DEST)/MODEL_CARD.md"
+	install -m 0644 "$(VERIFY_REPORT)" "$(DOC_DEST)/verification.json"
+	install -m 0644 provenance/granite-4.2-3b-q4_k_m.provenance.json "$(DOC_DEST)/provenance.json"

@@ -1,0 +1,28 @@
+[Unit]
+Description=Sentia local llama.cpp readiness probe (health + generation)
+After=sentia-local-llama.service
+Requires=sentia-local-llama.service
+ConditionPathExists=/usr/lib/sentia/runtime/probe_llama_runtime.py
+ConditionPathExists=/etc/sentia/llama/sentia-local.env
+
+[Service]
+Type=oneshot
+User=sentia-inference
+Group=sentia-inference
+EnvironmentFile=-/etc/sentia/llama/sentia-local.env
+ExecStart=/usr/lib/sentia/runtime/probe_llama_runtime.py \
+  --socket ${SENTIA_SOCKET_PATH} \
+  --max-wait-seconds 240 \
+  --n-predict 16 \
+  --report-path /var/log/sentia-local-llama/readiness.json
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,82 @@
+[Unit]
+Description=Sentia local llama.cpp inference runtime
+Documentation=file:/usr/share/doc/sentia-llama-cpp/README.Debian
+After=local-fs.target
+Wants=network.target
+ConditionPathExists=/usr/bin/llama-server
+ConditionPathExists=/etc/sentia/llama/sentia-local.env
+ConditionPathExists=/usr/share/sentia/models/granite-4.2-3b/granite-4.2-3b-Q4_K_M.gguf
+
+[Service]
+Type=simple
+User=sentia-inference
+Group=sentia-inference
+UMask=0007
+EnvironmentFile=-/etc/sentia/llama/sentia-local.env
+RuntimeDirectory=sentia-local
+RuntimeDirectoryMode=0750
+StateDirectory=sentia-local-llama
+StateDirectoryMode=0750
+LogsDirectory=sentia-local-llama
+LogsDirectoryMode=0750
+ExecStartPre=/usr/bin/test -r ${SENTIA_MODEL_PATH}
+ExecStartPre=/usr/bin/rm -f ${SENTIA_SOCKET_PATH}
+ExecStart=/usr/bin/llama-server \
+  --model ${SENTIA_MODEL_PATH} \
+  --host ${SENTIA_SOCKET_PATH} \
+  --ctx-size ${SENTIA_CTX_SIZE} \
+  --parallel ${SENTIA_N_PARALLEL} \
+  --predict ${SENTIA_MAX_PREDICT} \
+  --threads ${SENTIA_THREADS} \
+  --threads-batch ${SENTIA_THREADS_BATCH} \
+  --threads-http ${SENTIA_THREADS_HTTP} \
+  --batch-size ${SENTIA_BATCH_SIZE} \
+  --ubatch-size ${SENTIA_UBATCH_SIZE} \
+  --timeout ${SENTIA_TIMEOUT_SECONDS} \
+  --sleep-idle-seconds ${SENTIA_SLEEP_IDLE_SECONDS} \
+  --metrics \
+  --no-webui \
+  --no-slots
+ExecStopPost=/usr/bin/rm -f ${SENTIA_SOCKET_PATH}
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=900
+TimeoutStopSec=90
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+ProcSubset=pid
+MemoryDenyWriteExecute=yes
+LockPersonality=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+IPAddressDeny=any
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/usr/share/sentia/models
+ReadWritePaths=/var/lib/sentia-local-llama /var/log/sentia-local-llama /run/sentia-local
+RemoveIPC=yes
+TasksMax=128
+CPUAccounting=yes
+MemoryAccounting=yes
+IOAccounting=yes
+CPUWeight=20
+IOWeight=20
+Nice=10
+MemoryHigh=8G
+MemoryMax=10G
+
+[Install]
+WantedBy=multi-user.target
