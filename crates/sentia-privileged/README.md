@@ -159,7 +159,9 @@ be included in the native plan digest.
 
 ## Validation
 
-From the repository root:
+From the integrated repository root inside the designated **Debian 13/Trixie
+builder**, after its root workspace lock has been resolved for the target
+toolchain (Rust 1.85 or later):
 
 ```sh
 flock /home/ubuntu/sentia-linux/artifacts/.locks/heavy.lock \
@@ -182,20 +184,24 @@ Do not treat fixture authorization responses as release evidence.
 
 ### Recorded implementation check (2026-09-12)
 
-On the development host with Rust/Cargo 1.75, the committed standalone lock
+On the development host with Rust/Cargo 1.75, an earlier standalone test lock
 compiled successfully: **14 boundary tests, one bounded-output unit test and
 one isolated-bus integration test passed**. XML policy parsing passed.
 `systemd-analyze verify` reported the expected not-yet-installed executable,
 not a unit syntax error. `cargo fmt --check` was unavailable because the
 designated builder had not installed rustfmt.
 
-The standalone lock constrains `proc-macro-crate` to 3.1.0, `indexmap` to 2.7.1
-and `tokio` to 1.43.0 for this older host compiler. Once integrated into the
-root workspace, its root lockfile must preserve compatible dependency
-resolution; member lockfiles are ignored by Cargo in a workspace.
+Those are **host-only implementation checks, not Debian target build or
+qualification evidence**. The Ubuntu-only standalone lock was subsequently
+removed, not carried into the product dependency resolution. The crate now
+declares the Trixie Rust 1.85 baseline; no target dependency should be downgraded
+merely to accommodate Ubuntu's Rust 1.75. The root workspace owner must resolve
+and commit the product lockfile in the target builder. Target compilation and
+the exact ready builder invocation are pending the designated builder owner.
 
 Not yet verified: actual polkit authentication/desktop prompts, installed
-systemd sandbox startup, real service/APT changes, and Debian 13 VM operation.
+systemd sandbox startup, real service/APT changes, Debian 13 target compilation
+and Debian 13 VM operation.
 An unprivileged attempt to launch the real polkit daemon on a private bus
 exited immediately; no host polkit daemon, policy or privileged state was
 modified. Native APT integration additionally requires its independent worker
