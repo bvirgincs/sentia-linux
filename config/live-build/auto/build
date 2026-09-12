@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${SOURCE_DATE_EPOCH:?SOURCE_DATE_EPOCH must be set}"
+export SOURCE_DATE_EPOCH
+export MAKEFLAGS="${MAKEFLAGS:--j2}"
+
+lb build noauto --build-with-chroot true
