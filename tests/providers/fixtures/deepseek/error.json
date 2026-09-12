@@ -1,0 +1,7 @@
+{
+  "error": {
+    "message": "vendor detail fixture-secret-never-emit",
+    "type": "insufficient_balance",
+    "code": "insufficient_balance"
+  }
+}

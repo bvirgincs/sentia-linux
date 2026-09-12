@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "provider-profile-v1.json",
+  "title": "Sentia provider profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "provider",
+    "display_name",
+    "enabled",
+    "live_tested",
+    "verification",
+    "api",
+    "authentication",
+    "capabilities",
+    "billing",
+    "cli"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "provider": {
+      "enum": ["openai", "anthropic", "gemini", "xai", "deepseek"]
+    },
+    "display_name": {"type": "string", "minLength": 1},
+    "enabled": {"type": "boolean"},
+    "live_tested": {"type": "boolean"},
+    "verification": {
+      "enum": [
+        "official_docs_and_offline_fixtures_only",
+        "authorized_account_live_tested"
+      ]
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "endpoint",
+        "endpoint_override_allowed",
+        "model",
+        "model_validation"
+      ],
+      "properties": {
+        "contract": {"type": "string", "minLength": 1},
+        "endpoint": {"type": "string", "pattern": "^https://"},
+        "endpoint_override_allowed": {"const": false},
+        "model": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9_.:-]*$"
+        },
+        "model_validation": {"const": "syntax_only_no_remote_availability_claim"}
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "handoff"],
+      "properties": {
+        "kind": {"const": "provider_scoped_api_key"},
+        "handoff": {"const": "inherited_fd_3_only"}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text_generation",
+        "streaming",
+        "tool_calls",
+        "files",
+        "server_state"
+      ],
+      "properties": {
+        "text_generation": {"const": true},
+        "streaming": {"const": false},
+        "tool_calls": {"const": false},
+        "files": {"const": false},
+        "server_state": {"const": false}
+      }
+    },
+    "billing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "consumer_subscription"],
+      "properties": {
+        "kind": {"const": "separately_billed_api_usage"},
+        "consumer_subscription": {"const": "not_an_api_billing_entitlement"}
+      }
+    },
+    "cli": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason"],
+      "properties": {
+        "state": {
+          "enum": [
+            "not_implemented",
+            "conditional_not_enabled",
+            "held_unverified",
+            "not_eligible"
+          ]
+        },
+        "reason": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

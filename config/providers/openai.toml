@@ -1,0 +1,32 @@
+schema_version = 1
+provider = "openai"
+display_name = "OpenAI API (bring your own API key)"
+enabled = false
+live_tested = false
+verification = "official_docs_and_offline_fixtures_only"
+
+[api]
+contract = "OpenAI Responses API"
+endpoint = "https://api.openai.com/v1/responses"
+endpoint_override_allowed = false
+model = ""
+model_validation = "syntax_only_no_remote_availability_claim"
+
+[authentication]
+kind = "provider_scoped_api_key"
+handoff = "inherited_fd_3_only"
+
+[capabilities]
+text_generation = true
+streaming = false
+tool_calls = false
+files = false
+server_state = false
+
+[billing]
+kind = "separately_billed_api_usage"
+consumer_subscription = "not_an_api_billing_entitlement"
+
+[cli]
+state = "not_implemented"
+reason = "A Codex or ChatGPT account login is not an API credential and does not prove an inference-only embedding contract."

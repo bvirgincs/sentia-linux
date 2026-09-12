@@ -1,0 +1,32 @@
+schema_version = 1
+provider = "deepseek"
+display_name = "DeepSeek API (bring your own API key)"
+enabled = false
+live_tested = false
+verification = "official_docs_and_offline_fixtures_only"
+
+[api]
+contract = "DeepSeek OpenAI-compatible Chat Completions API"
+endpoint = "https://api.deepseek.com/chat/completions"
+endpoint_override_allowed = false
+model = ""
+model_validation = "syntax_only_no_remote_availability_claim"
+
+[authentication]
+kind = "provider_scoped_api_key"
+handoff = "inherited_fd_3_only"
+
+[capabilities]
+text_generation = true
+streaming = false
+tool_calls = false
+files = false
+server_state = false
+
+[billing]
+kind = "separately_billed_api_usage"
+consumer_subscription = "not_an_api_billing_entitlement"
+
+[cli]
+state = "not_implemented"
+reason = "The DeepSeek preview agent harness is not a production inference dependency and is not wrapped by Sentia."

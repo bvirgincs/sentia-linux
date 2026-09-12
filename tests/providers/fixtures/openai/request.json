@@ -1,0 +1,15 @@
+{
+  "model": "configured-model",
+  "instructions": "system guidance",
+  "input": [
+    {"role": "user", "content": "hello"},
+    {"role": "assistant", "content": "hi"},
+    {"role": "user", "content": "answer briefly"}
+  ],
+  "max_output_tokens": 32,
+  "store": false,
+  "stream": false,
+  "tools": [],
+  "tool_choice": "none",
+  "temperature": 0.25
+}

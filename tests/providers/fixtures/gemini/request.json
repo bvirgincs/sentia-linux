@@ -1,0 +1,9 @@
+{
+  "system_instruction": {"parts": [{"text": "system guidance"}]},
+  "contents": [
+    {"role": "user", "parts": [{"text": "hello"}]},
+    {"role": "model", "parts": [{"text": "hi"}]},
+    {"role": "user", "parts": [{"text": "answer briefly"}]}
+  ],
+  "generationConfig": {"maxOutputTokens": 32, "temperature": 0.25}
+}

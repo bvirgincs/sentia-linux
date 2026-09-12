@@ -1,0 +1,12 @@
+{
+  "model": "configured-model",
+  "system": "system guidance",
+  "messages": [
+    {"role": "user", "content": "hello"},
+    {"role": "assistant", "content": "hi"},
+    {"role": "user", "content": "answer briefly"}
+  ],
+  "max_tokens": 32,
+  "stream": false,
+  "temperature": 0.25
+}
