@@ -8,7 +8,8 @@
   - `NOTICE`
   - `docs/*`
   - `.github/agents/*.agent.md`
-  - `tests/acceptance/manifest.yaml`
+- Pending outside this scope: the canonical acceptance manifest
+  `tests/acceptance/manifest.json`, owned by the contract engineer.
 - Not yet implemented: build system, schemas, packages, runtime, installer,
   tests, VM automation, or release automation.
 - Not yet tested: runtime, integration, live boot, Calamares, installed-system,

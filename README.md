@@ -14,6 +14,10 @@ system, schemas, packages, runtime, installer, or a qualified release.
 No runtime, integration, live-boot, Calamares, or production-signing evidence
 exists here yet.
 
+The canonical acceptance manifest lives in
+`tests/acceptance/manifest.json` under contract-engineer ownership and is
+pending integration. This checkpoint does not implement the acceptance schema.
+
 ## Repository boundaries
 
 - Original Sentia work is Apache-2.0.

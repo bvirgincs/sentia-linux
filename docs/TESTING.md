@@ -39,4 +39,9 @@ Only static document and YAML-frontmatter validation is appropriate here.
 
 - `git diff --check`
 - `python3` with PyYAML to parse every `.github/agents/*.agent.md` frontmatter
-  block and `tests/acceptance/manifest.yaml`
+  block
+
+## Acceptance manifest status
+
+The canonical JSON manifest is owned by the contract engineer and is pending
+integration, so no acceptance-manifest validation has run in this checkpoint.

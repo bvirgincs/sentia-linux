@@ -1,6 +1,10 @@
 # Acceptance
 
-Canonical machine-readable manifest: `tests/acceptance/manifest.yaml`
+Canonical machine-readable manifest:
+`tests/acceptance/manifest.json` (contract-engineer owned; pending
+integration)
+
+This checkpoint does not implement the acceptance schema.
 
 ## Current status
 
@@ -28,4 +32,5 @@ remains `not-run`.
 ## Rule
 
 Any future machine-generated acceptance result must be published back to the
-manifest and this document together so they do not drift.
+canonical JSON manifest and this document together once that commit lands, so
+they do not drift.

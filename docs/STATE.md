@@ -15,7 +15,8 @@ release: not-qualified
 - Developer-facing README guidance for the planned `make` interface.
 - Honest state and decision documentation.
 - Custom agent profiles under `.github/agents/`.
-- A machine-readable acceptance manifest that remains unrun.
+- A pending reference to the contract-engineer-owned canonical acceptance
+  manifest; no local acceptance schema is implemented here.
 
 ## Untested
 
