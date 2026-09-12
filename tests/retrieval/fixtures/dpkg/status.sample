@@ -1,0 +1,15 @@
+Package: sentia-router
+Status: install ok installed
+Priority: optional
+Section: utils
+Architecture: amd64
+Version: 1.2.3-1
+Depends: libc6 (>= 2.36)
+Description: Sentia local router
+ Provides local routing between retrieval and command tools.
+
+Package: uninstalled-demo
+Status: deinstall ok config-files
+Architecture: amd64
+Version: 9.9.9-1
+Description: Should not be indexed

@@ -1,0 +1,30 @@
+[Unit]
+Description=Sentia local retrieval index refresh
+After=local-fs.target
+ConditionPathExists=/etc/sentia/retrieval/sources.toml
+
+[Service]
+Type=oneshot
+User=sentia-index
+Group=sentia-index
+UMask=0027
+StateDirectory=sentia/retrieval
+WorkingDirectory=/
+ExecStart=/usr/bin/sentia-retrieval index --config /etc/sentia/retrieval/sources.toml --index /var/lib/sentia/retrieval/index.sqlite
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectHome=true
+ProtectSystem=strict
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+ReadOnlyPaths=/etc/sentia/retrieval /usr/share/doc /usr/share/man /var/lib/dpkg/status
+ReadWritePaths=/var/lib/sentia/retrieval

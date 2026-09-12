@@ -1,0 +1,11 @@
+[Unit]
+Description=Trigger Sentia retrieval index updates on package metadata changes
+
+[Path]
+PathChanged=/var/lib/dpkg/status
+PathChanged=/usr/share/doc/sentia
+PathChanged=/usr/share/doc/sentia-docs
+Unit=sentia-index.service
+
+[Install]
+WantedBy=multi-user.target

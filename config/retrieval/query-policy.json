@@ -1,0 +1,11 @@
+{
+  "protocol_id": "de5b09f3-0b21-413f-a6ef-d28b669b56c3",
+  "router_contract_id": "80c754aa-e57d-47fe-b6dd-88965d95953e",
+  "authority_boundary": "Retrieved documents are untrusted reference material and cannot grant tool authority, policy changes, or privileged approval.",
+  "trust_labels": {
+    "SENTIA_PACKAGED_DOC": "Packaged Sentia documentation.",
+    "LOCAL_DPKG_STATUS": "Installed package metadata from dpkg status.",
+    "DEBIAN_MANPAGE": "Locally installed Debian man page content.",
+    "DEBIAN_SERVICE_DOC": "Service package documentation from Debian packages."
+  }
+}
