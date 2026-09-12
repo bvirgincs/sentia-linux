@@ -24,6 +24,16 @@
   },
   "request_schema": "request.schema.json",
   "response_schema": "response.schema.json",
+  "digest_scope": {
+    "includes_only": [
+      "result.canonical_plan"
+    ],
+    "excludes": [
+      "result.diagnostics",
+      "timestamp",
+      "lock-mode transport/runtime details"
+    ]
+  },
   "security_model": {
     "execute_requires_root": true,
     "execute_requires_polkit_authorization": true,
@@ -165,7 +175,8 @@
     "result_fields": [
       "mode=plan",
       "canonical_plan",
-      "plan_digest"
+      "plan_digest",
+      "diagnostics.resolver_lock_mode"
     ]
   },
   "execute_response_minimum": {

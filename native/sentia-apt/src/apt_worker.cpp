@@ -98,6 +98,7 @@ struct ApprovalEnvelope {
 struct PlannedTransaction {
   json canonical_plan;
   std::string digest;
+  bool resolved_with_lock = false;
   bool has_source_changes = false;
   bool has_essential_removals = false;
   bool has_held_changes = false;
@@ -870,11 +871,11 @@ PlannedTransaction BuildCanonicalPlan(const std::string& operation,
   std::sort(sorted_requested.begin(), sorted_requested.end());
 
   PlannedTransaction planned;
+  planned.resolved_with_lock = with_lock;
   planned.canonical_plan =
       json{{"protocol_version", kProtocolVersion},
            {"operation", operation},
            {"requested_packages", sorted_requested},
-           {"with_lock", with_lock},
            {"changes",
             {{"install", install},
              {"remove", remove},
@@ -1291,6 +1292,10 @@ json HandlePlanOnly(const RequestEnvelope& request, const std::string& operation
   return {{"mode", "plan"},
           {"canonical_plan", planned.canonical_plan},
           {"plan_digest", planned.digest},
+          {"diagnostics",
+           {{"resolver_lock_mode",
+             planned.resolved_with_lock ? "locked" : "unlocked"},
+            {"digest_scope", "canonical_plan_only"}}},
           {"execution_guards",
            {{"requires_root", true},
             {"requires_approval", true},
@@ -1379,6 +1384,10 @@ json HandleExecute(const RequestEnvelope& request, const std::string& operation,
   return {{"mode", "execute"},
           {"plan_digest", execute_plan.digest},
           {"canonical_plan", execute_plan.canonical_plan},
+          {"diagnostics",
+           {{"resolver_lock_mode",
+             execute_plan.resolved_with_lock ? "locked" : "unlocked"},
+            {"digest_scope", "canonical_plan_only"}}},
           {"approval",
            {{"broker_session_id", approval.broker_session_id},
             {"authorization_id", approval.authorization_id},

@@ -46,6 +46,10 @@ class ProtocolContractTests(unittest.TestCase):
         self.assertEqual(contract["runtime_limits"]["plan_timeout_seconds"], 30)
         self.assertEqual(contract["runtime_limits"]["execute_timeout_seconds"], 900)
         self.assertTrue(contract["execution_environment"]["ignore_user_environment"])
+        self.assertEqual(
+            contract["digest_scope"]["includes_only"], ["result.canonical_plan"]
+        )
+        self.assertIn("result.diagnostics", contract["digest_scope"]["excludes"])
         required = set(contract["required_approval_fields"])
         self.assertEqual(
             required,
