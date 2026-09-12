@@ -19,7 +19,7 @@ pub struct DaemonConfig {
 impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
-            socket_path: PathBuf::from("/run/sentia/health.sock"),
+            socket_path: PathBuf::from("/run/sentia-health/metrics.sock"),
             monitor: MonitorConfig::default(),
             poll_sleep: Duration::from_millis(200),
         }
@@ -39,7 +39,7 @@ pub fn run_daemon(config: DaemonConfig) -> io::Result<()> {
     }
 
     let listener = UnixListener::bind(&config.socket_path)?;
-    fs::set_permissions(&config.socket_path, fs::Permissions::from_mode(0o660))?;
+    fs::set_permissions(&config.socket_path, fs::Permissions::from_mode(0o666))?;
     listener.set_nonblocking(true)?;
 
     let mut monitor = HealthMonitor::new(config.monitor);

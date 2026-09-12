@@ -30,7 +30,7 @@ impl Default for Cli {
         Self {
             mode: Mode::Daemon,
             from_socket: false,
-            socket_path: PathBuf::from("/run/sentia/health.sock"),
+            socket_path: PathBuf::from("/run/sentia-health/metrics.sock"),
             min_interval_ms: 2_000,
             normal_interval_ms: 5_000,
             max_interval_ms: 20_000,

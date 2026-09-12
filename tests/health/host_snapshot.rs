@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use sentia_health::{CollectorConfig, HealthCollector, HealthMonitor};
+use sentia_health::{CollectorConfig, DaemonConfig, HealthCollector, HealthMonitor};
 use sentia_health::schema::CapabilityState;
 
 #[test]
@@ -42,4 +42,13 @@ fn missing_temperature_fixture_reports_unavailable_capability() {
 
     assert!(temperature.sensors.is_empty());
     assert_eq!(capability.state, CapabilityState::Unavailable);
+}
+
+#[test]
+fn default_socket_path_matches_integration_contract() {
+    let daemon = DaemonConfig::default();
+    assert_eq!(
+        daemon.socket_path,
+        PathBuf::from("/run/sentia-health/metrics.sock")
+    );
 }
