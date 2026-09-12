@@ -1,0 +1,11 @@
+Package: *
+Pin: release o=Sentia
+Pin-Priority: -10
+
+Package: sentia-release sentia-archive-keyring sentia-base sentia-desktop sentia-ai sentia-llama-cpp sentia-granite-model sentia-local-broker sentia-router sentia-terminal sentia-system-tools sentia-health sentia-firstboot sentia-docs sentia-command-index sentia-calamares-settings sentia-live sentia-repository-config sentia-offline-repository
+Pin: release o=Sentia
+Pin-Priority: 700
+
+Package: base-files
+Pin: release o=Sentia
+Pin-Priority: 1001

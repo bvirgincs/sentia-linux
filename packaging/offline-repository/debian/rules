@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+.RECIPEPREFIX = >
+
+required_metadata := \
+  staged-archive-source/dists/sentia-0.1/InRelease \
+  staged-archive-source/dists/sentia-0.1/Release \
+  staged-archive-source/dists/sentia-0.1/Release.gpg \
+  staged-archive-source/dists/sentia-0.1/main/binary-amd64/Packages
+
+required_installed_metadata := \
+  dists/sentia-0.1/InRelease \
+  dists/sentia-0.1/Release \
+  dists/sentia-0.1/Release.gpg \
+  dists/sentia-0.1/main/binary-amd64/Packages
+
+%:
+> dh $@
+
+override_dh_auto_build:
+> for file in $(required_metadata); do \
+>   if [ ! -f "$$file" ]; then \
+>     echo "Missing staged archive metadata: $$file" >&2; \
+>     exit 1; \
+>   fi; \
+> done
+> install -d debian/staged-archive
+> cp -a staged-archive-source/. debian/staged-archive/
+> for file in $(required_installed_metadata); do \
+>   if [ ! -f "debian/staged-archive/$$file" ]; then \
+>     echo "Missing install archive metadata: $$file" >&2; \
+>     exit 1; \
+>   fi; \
+> done
+> if find debian/staged-archive -type f \( -name '*.gguf' -o -name 'sentia-offline-repository_*.deb' \) | grep -q .; then \
+>   echo "Compact archive staging includes forbidden payload(s)." >&2; \
+>   exit 1; \
+> fi
+> if find debian/staged-archive/pool -type f -size +700M | grep -q .; then \
+>   echo "Compact archive unexpectedly includes oversized package payload(s)." >&2; \
+>   exit 1; \
+> fi
+
+override_dh_auto_install:
+> install -d debian/sentia-offline-repository/usr/share/sentia/archive
+> cp -a debian/staged-archive/. debian/sentia-offline-repository/usr/share/sentia/archive/
+
+execute_after_dh_clean:
+> rm -rf debian/staged-archive

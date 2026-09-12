@@ -1,0 +1,14 @@
+Source: sentia-offline-repository
+Section: admin
+Priority: optional
+Maintainer: Sentia Packaging Team <packaging@sentia.invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: sentia-offline-repository
+Architecture: all
+Depends: ${misc:Depends}
+Description: Compact signed local Sentia package archive
+ Installs compact signed archive metadata and payloads under
+ /usr/share/sentia/archive for offline package operations.

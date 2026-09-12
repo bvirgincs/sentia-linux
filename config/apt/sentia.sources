@@ -1,0 +1,6 @@
+Types: deb
+URIs: file:/usr/share/sentia/archive
+Suites: sentia-0.1
+Components: main
+Signed-By: /usr/share/keyrings/sentia-archive-keyring.gpg
+Enabled: yes

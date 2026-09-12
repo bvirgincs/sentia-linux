@@ -1,0 +1,5 @@
+sentia-offline-repository (0.1.0-1) trixie; urgency=medium
+
+  * Initial package that ships compact signed Sentia local archive snapshot.
+
+ -- Sentia Packaging Team <packaging@sentia.invalid>  Sat, 12 Sep 2026 18:47:00 +0000

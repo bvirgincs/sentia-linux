@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+.RECIPEPREFIX = >
+
+%:
+> dh $@
+
+override_dh_auto_build:
+> test -f staged-inputs-source/sentia-archive-keyring.gpg
+> install -d debian/staged-inputs
+> cp -a staged-inputs-source/sentia-archive-keyring.gpg debian/staged-inputs/sentia-archive-keyring.gpg
+> gpg --batch --quiet --show-keys debian/staged-inputs/sentia-archive-keyring.gpg >/dev/null
+
+execute_after_dh_clean:
+> rm -rf debian/staged-inputs
