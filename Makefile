@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: bootstrap packages repo iso test test-iso test-install test-failure release clean
+.PHONY: bootstrap packages repo iso test test-rust test-iso test-install test-failure release clean
 
 bootstrap:
 	./build/bootstrap/bootstrap.sh
@@ -16,6 +16,9 @@ iso:
 
 test:
 	./build/scripts/test.sh
+
+test-rust:
+	./build/scripts/test-rust.sh
 
 test-iso:
 	./build/scripts/test-iso.sh

@@ -32,8 +32,14 @@ override_dh_auto_build:
 	  --jobs $(CARGO_JOBS)
 
 override_dh_auto_test:
-	cd $(WORKSPACE) && cargo test --release --locked --workspace \
-	  --jobs $(CARGO_JOBS) --no-fail-fast
+	# The workspace test suite is deliberately NOT run here. Debian package
+	# builds run as root, and a significant part of this suite asserts that
+	# Sentia refuses to operate with root-owned sockets, root-owned retrieval
+	# indexes and world-reachable permissions. Running those assertions as root
+	# inverts them: they fail precisely because the security behaviour they
+	# check is working. `make test-rust` runs the same suite as an ordinary
+	# user, which is the environment the code is written for.
+	@echo "workspace tests are run by make test-rust as a non-root user"
 
 # ---------------------------------------------------------------- sentia-router
 override_dh_auto_install:

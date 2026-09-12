@@ -16,6 +16,7 @@ lb config noauto \
   --security true \
   --updates true \
   --checksums sha256 \
+  --hostname sentia \
   --iso-application "Sentia Linux" \
   --iso-publisher "Sentia Linux" \
   --iso-volume "Sentia 0.1 amd64" \

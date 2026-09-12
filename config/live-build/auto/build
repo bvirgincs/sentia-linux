@@ -44,6 +44,34 @@ stage_overlay_into cache/bootstrap
 
 lb chroot noauto
 
+# live-build's bootstrap stage copies Debian's /usr/lib/os-release to a real
+# /etc/os-release file and dpkg-diverts it, so that later package upgrades
+# cannot change it. That happens before sentia-base-files exists, which leaves
+# the booted system reporting Debian's identity from /etc/os-release while
+# /usr/lib/os-release correctly says Sentia. chroot_hacks removes the divert at
+# the end of the chroot stage but never restores the symlink, so restore the
+# layout Debian's base-files actually ships. The live image metadata that
+# live-build appended is re-applied to the canonical file.
+restore_os_release_symlink() {
+  local root="$1"
+  [[ -f "${root}/usr/lib/os-release" ]] || return 0
+  if [[ -f "${root}/etc/os-release" && ! -L "${root}/etc/os-release" ]]; then
+    local key
+    for key in IMAGE_ID BUILD_ID; do
+      local line
+      line="$(grep "^${key}=" "${root}/etc/os-release" || true)"
+      if [[ -n "${line}" ]] && ! grep -q "^${key}=" "${root}/usr/lib/os-release"; then
+        printf '%s\n' "${line}" >> "${root}/usr/lib/os-release"
+      fi
+    done
+    rm -f "${root}/etc/os-release"
+    ln -s ../usr/lib/os-release "${root}/etc/os-release"
+  fi
+}
+
+restore_os_release_symlink chroot
+
+
 # The archive deliberately stays in the chroot here. `lb binary` reinstalls the
 # chroot-mode apt sources (mode-archives-chroot) before building the squashfs,
 # so removing it at this point makes the binary stage fail on a dangling file:
