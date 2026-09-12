@@ -1,5 +1,7 @@
 {
+  "method_version": 1,
   "protocol_version": "1.0",
+  "binary_path": "/usr/libexec/sentia/sentia-apt",
   "commands": {
     "apt_search": {
       "request_id": "req-search-001",

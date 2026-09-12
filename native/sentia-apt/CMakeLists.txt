@@ -24,28 +24,28 @@ if(NOT nlohmann_json_FOUND)
 endif()
 
 add_executable(
-  sentia-apt-worker
+  sentia-apt
   src/main.cpp
   src/apt_worker.cpp
   src/sha256.cpp
 )
 
-target_compile_options(sentia-apt-worker PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(sentia-apt PRIVATE -Wall -Wextra -Wpedantic)
 
 if(TARGET PkgConfig::APT_PKG)
-  target_link_libraries(sentia-apt-worker PRIVATE PkgConfig::APT_PKG)
+  target_link_libraries(sentia-apt PRIVATE PkgConfig::APT_PKG)
 else()
-  target_include_directories(sentia-apt-worker PRIVATE ${APT_PKG_INCLUDE_DIR})
-  target_link_libraries(sentia-apt-worker PRIVATE ${APT_PKG_LIBRARY})
+  target_include_directories(sentia-apt PRIVATE ${APT_PKG_INCLUDE_DIR})
+  target_link_libraries(sentia-apt PRIVATE ${APT_PKG_LIBRARY})
 endif()
 
 if(nlohmann_json_FOUND)
-  target_link_libraries(sentia-apt-worker PRIVATE nlohmann_json::nlohmann_json)
+  target_link_libraries(sentia-apt PRIVATE nlohmann_json::nlohmann_json)
 else()
-  target_include_directories(sentia-apt-worker PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
+  target_include_directories(sentia-apt PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
 endif()
 
-install(TARGETS sentia-apt-worker RUNTIME DESTINATION libexec/sentia)
+install(TARGETS sentia-apt RUNTIME DESTINATION libexec/sentia)
 install(
   FILES
     protocol/request.schema.json

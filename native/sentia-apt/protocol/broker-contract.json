@@ -1,11 +1,21 @@
 {
+  "contract_name": "sentia-apt plan/execute broker contract",
+  "method_version": 1,
   "protocol_version": "1.0",
-  "description": "Canonical plan/execute contract between privilege broker and sentia-apt-worker.",
+  "binary_path": "/usr/libexec/sentia/sentia-apt",
+  "invocation": {
+    "transport": "stdin/stdout",
+    "framing": "single JSON request object in stdin; single JSON response object in stdout",
+    "encoding": "UTF-8"
+  },
+  "request_schema": "request.schema.json",
+  "response_schema": "response.schema.json",
   "security_model": {
     "execute_requires_root": true,
     "execute_requires_polkit_authorization": true,
     "execute_requires_single_use_plan_digest": true,
-    "worker_revalidates_everything": true,
+    "worker_revalidates_under_locks": true,
+    "worker_rejects_client_plan_trust": true,
     "rejects_arbitrary_shell": true
   },
   "required_approval_fields": [
@@ -20,9 +30,95 @@
   "plan_then_execute_flow": [
     "1) broker sends mode=plan request",
     "2) worker returns canonical_plan + plan_digest",
-    "3) broker displays exact canonical plan to trusted UI",
-    "4) after polkit success, broker sends mode=execute with approval payload",
-    "5) worker re-resolves under lock and compares digest before execution"
+    "3) broker shows exact canonical_plan and digest in trusted GUI preview",
+    "4) GUI/polkit authorization occurs outside model dispatch",
+    "5) broker sends mode=execute with approval payload",
+    "6) worker locks apt state, re-resolves, recomputes digest, rejects if changed"
+  ],
+  "operation_matrix": {
+    "apt_search": {
+      "mode": "read_only",
+      "arguments": {
+        "query": "string (1..256)",
+        "limit": "int (1..200, default 25)"
+      }
+    },
+    "apt_package_info": {
+      "mode": "read_only",
+      "arguments": {
+        "packages": "array[string package-name regex ^[a-z0-9][a-z0-9+.-]{0,127}$] (1..64)",
+        "version_limit": "int (1..50, default 10)"
+      }
+    },
+    "apt_package_policy": {
+      "mode": "read_only",
+      "arguments": {
+        "packages": "array[string package-name regex ^[a-z0-9][a-z0-9+.-]{0,127}$] (1..64)",
+        "version_limit": "int (1..50, default 10)"
+      }
+    },
+    "apt_simulate_install": {
+      "mode": "plan_only",
+      "arguments": {
+        "packages": "array[string package-name] (1..64)"
+      }
+    },
+    "apt_install": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute",
+        "packages": "array[string package-name] (1..64)"
+      }
+    },
+    "apt_remove": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute",
+        "packages": "array[string package-name] (1..64)"
+      }
+    },
+    "apt_update": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute"
+      }
+    },
+    "apt_upgrade": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute"
+      }
+    },
+    "package_owns_file": {
+      "mode": "read_only",
+      "arguments": {
+        "file_path": "string (1..4096)",
+        "index_path": "optional string (1..4096)"
+      }
+    }
+  },
+  "plan_response_minimum": {
+    "status": "ok",
+    "result_fields": [
+      "mode=plan",
+      "canonical_plan",
+      "plan_digest"
+    ]
+  },
+  "execute_response_minimum": {
+    "status": "ok",
+    "result_fields": [
+      "mode=execute",
+      "canonical_plan",
+      "plan_digest",
+      "execution"
+    ]
+  },
+  "error_codes_requiring_reapproval": [
+    "plan_digest_mismatch",
+    "source_change_requires_approval",
+    "essential_removal_rejected",
+    "held_package_change_rejected"
   ],
   "examples": {
     "install_plan_request": {
@@ -56,25 +152,6 @@
         "allow_source_change": false,
         "allow_essential_removal": false,
         "allow_held_change": false
-      }
-    },
-    "remove_plan_request": {
-      "request_id": "req-remove-plan-001",
-      "protocol_version": "1.0",
-      "operation": "apt_remove",
-      "arguments": {
-        "mode": "plan",
-        "packages": [
-          "example-package"
-        ]
-      }
-    },
-    "upgrade_plan_request": {
-      "request_id": "req-upgrade-plan-001",
-      "protocol_version": "1.0",
-      "operation": "apt_upgrade",
-      "arguments": {
-        "mode": "plan"
       }
     },
     "update_plan_request": {

@@ -20,6 +20,12 @@ Structured APT worker implemented in C++ on top of `libapt-pkg`.
 - Re-resolves and re-hashes canonical plan state before execute.
 - Rejects unapproved source changes, held-package changes, and essential removals by default.
 
+## Installed binary path
+
+The broker-invoked binary path is fixed:
+
+- `/usr/libexec/sentia/sentia-apt`
+
 ## Build
 
 ```bash
