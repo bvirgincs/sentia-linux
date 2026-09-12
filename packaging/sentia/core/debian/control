@@ -26,7 +26,7 @@ Description: Sentia local AI metapackage
 
 Package: sentia-repository-config
 Architecture: all
-Depends: ${misc:Depends}, sentia-archive-keyring
+Depends: ${misc:Depends}, sentia-archive-keyring, sentia-offline-repository
 Description: Sentia APT sources, pinning, and update policy
  Installs literal Debian 13 Trixie Deb822 sources, Sentia signed local file
  archive source, explicit Origin pin policy, and Debian security unattended
