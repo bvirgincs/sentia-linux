@@ -3,7 +3,7 @@ set -euo pipefail
 
 SENTIA_PACKAGING_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SENTIA_REPO_ROOT="$(cd "$SENTIA_PACKAGING_LIB_DIR/../.." && pwd)"
-SENTIA_HEAVY_LOCK="${SENTIA_HEAVY_LOCK:-/home/ubuntu/sentia-linux/artifacts/.locks/heavy.lock}"
+SENTIA_HEAVY_LOCK="${SENTIA_HEAVY_LOCK:-$SENTIA_REPO_ROOT/artifacts/.locks/heavy.lock}"
 
 require_tool() {
   local tool="$1"

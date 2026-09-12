@@ -42,9 +42,13 @@ pub struct ChatContent {
     pub context: Vec<ContextItem>,
     #[serde(default)]
     pub max_tokens: Option<u32>,
-    pub provenance: DataProvenance,
 }
 
+/// Decoded inference request.
+///
+/// `provenance` is taken from the authoritative `RouterRequest` envelope, never
+/// from the chat payload, so a caller cannot declare a weaker sensitivity than
+/// the envelope the privacy gate evaluates.
 #[derive(Clone, Debug)]
 pub struct ChatInput {
     pub request_id: String,
@@ -55,6 +59,7 @@ pub struct ChatInput {
     pub context: Vec<ContextItem>,
     pub consent_token: Option<ConsentToken>,
     pub max_tokens: Option<u32>,
+    pub provenance: DataProvenance,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

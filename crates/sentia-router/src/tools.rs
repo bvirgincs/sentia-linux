@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sentia_local_broker::protocol::{BrokerTool, BrokerToolCall};
 use sentia_protocol::{
     BoundedString, JsonlFrame, PrivilegeClass, ToolName, ToolProvenance, ToolProvenanceSource,
-    ToolRequest, ModelToolResultStatus, MAX_TOOL_INPUT_BYTES_V1, PROTOCOL_VERSION_V1,
+    ToolRequest, ToolResultStatus, MAX_TOOL_INPUT_BYTES_V1, PROTOCOL_VERSION_V1,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -197,7 +197,7 @@ impl ToolRegistry for UnixToolRegistry {
             }
         };
         match response {
-            JsonlFrame::ModelToolResult {
+            JsonlFrame::ToolResult {
                 stream_id: response_stream,
                 tool_result,
                 ..
@@ -216,7 +216,7 @@ impl ToolRegistry for UnixToolRegistry {
                     ));
                 }
                 match tool_result.status {
-                    ModelToolResultStatus::Ok => Ok(ModelToolResult {
+                    ToolResultStatus::Ok => Ok(ModelToolResult {
                         content: serde_json::to_string(&tool_result.data)
                             .map_err(|error| ToolError::Failed(error.to_string()))?,
                         provenance: format!(
@@ -291,27 +291,30 @@ pub async fn validate_and_invoke(
         ));
     }
 
-    fn forbidden_tool_path(path: &str) -> bool {
-        let normalized = path.to_ascii_lowercase();
-        [
-            "/.ssh/",
-            "/.gnupg/",
-            "/.aws/",
-            "/.config/gcloud/",
-            "/.config/gh/",
-            "/.local/share/keyrings/",
-            "/keyrings/",
-            "/cookies",
-            "/login data",
-            "/.bash_history",
-            "/.zsh_history",
-            "/etc/shadow",
-            "/etc/ssl/private/",
-        ]
-        .iter()
-        .any(|needle| normalized.contains(needle))
-    }
     Ok(result)
+}
+
+/// Paths holding credentials or private user state that are never exposed to
+/// the model, regardless of the tool that was asked to read them.
+fn forbidden_tool_path(path: &str) -> bool {
+    let normalized = path.to_ascii_lowercase();
+    [
+        "/.ssh/",
+        "/.gnupg/",
+        "/.aws/",
+        "/.config/gcloud/",
+        "/.config/gh/",
+        "/.local/share/keyrings/",
+        "/keyrings/",
+        "/cookies",
+        "/login data",
+        "/.bash_history",
+        "/.zsh_history",
+        "/etc/shadow",
+        "/etc/ssl/private/",
+    ]
+    .iter()
+    .any(|needle| normalized.contains(needle))
 }
 
 fn safe_tool_definitions() -> Vec<ModelToolDefinition> {

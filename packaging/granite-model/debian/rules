@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-MODEL_STAGE ?= /home/ubuntu/sentia-linux/artifacts/downloads/granite-model
+MODEL_STAGE ?= $(CURDIR)/../../artifacts/downloads/granite-model
 MODEL_FILE := $(MODEL_STAGE)/granite-4.2-3b-Q4_K_M.gguf
 MODEL_SIG := $(MODEL_STAGE)/model.sig
 MODEL_CARD := $(MODEL_STAGE)/README.md

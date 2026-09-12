@@ -2,9 +2,9 @@
 set -euo pipefail
 
 SENTIA_RUNTIME_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SENTIA_BUILD_ROOT="/home/ubuntu/sentia-linux/.build/runtime"
-SENTIA_DOWNLOAD_ROOT="/home/ubuntu/sentia-linux/artifacts/downloads"
-SENTIA_HEAVY_LOCK="/home/ubuntu/sentia-linux/artifacts/.locks/heavy.lock"
+SENTIA_BUILD_ROOT="${SENTIA_BUILD_ROOT:-${SENTIA_RUNTIME_REPO_ROOT}/.build/runtime}"
+SENTIA_DOWNLOAD_ROOT="${SENTIA_DOWNLOAD_ROOT:-${SENTIA_RUNTIME_REPO_ROOT}/artifacts/downloads}"
+SENTIA_HEAVY_LOCK="${SENTIA_HEAVY_LOCK:-${SENTIA_RUNTIME_REPO_ROOT}/artifacts/.locks/heavy.lock}"
 
 mkdir -p "${SENTIA_BUILD_ROOT}" "${SENTIA_DOWNLOAD_ROOT}"
 

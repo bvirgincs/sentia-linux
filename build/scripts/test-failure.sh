@@ -46,10 +46,22 @@ run_expect_fail() {
   log "${label}: expected failure observed"
 }
 
+stub_entrypoint="${sandbox}/no-op-package-build.sh"
+cat > "${stub_entrypoint}" <<'STUB'
+#!/usr/bin/env bash
+# Produces no packages so packages.sh fail-closed validation can be exercised
+# without running a real Debian package build.
+exit 0
+STUB
+chmod 0755 "${stub_entrypoint}"
+
 run_expect_fail \
   "packages-missing-inputs" \
   "required directory is empty" \
-  env SENTIA_PACKAGE_INPUT_DIR="${sandbox}/empty" "${REPO_ROOT}/build/scripts/packages.sh"
+  env SENTIA_PACKAGE_INPUT_DIR="${sandbox}/empty" \
+      SENTIA_PACKAGE_BUILD_ENTRYPOINT="${stub_entrypoint}" \
+      SENTIA_PACKAGE_BUILD_IN_BUILDER=0 \
+      "${REPO_ROOT}/build/scripts/packages.sh"
 
 run_expect_fail \
   "repo-missing-signing-key" \

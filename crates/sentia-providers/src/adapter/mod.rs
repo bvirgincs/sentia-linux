@@ -222,11 +222,12 @@ fn safe_vendor_code(body: &[u8]) -> Option<String> {
         value.get("type"),
         value.pointer("/error/status"),
     ];
-    candidates
+    let code = candidates
         .into_iter()
         .flatten()
         .find_map(Value::as_str)
-        .and_then(sanitize_code)
+        .and_then(sanitize_code);
+    code
 }
 
 fn sanitize_code(value: &str) -> Option<String> {

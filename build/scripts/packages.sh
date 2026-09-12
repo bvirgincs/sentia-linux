@@ -16,7 +16,26 @@ require_command dpkg-deb
 
 [[ -x "${PACKAGE_BUILD_ENTRYPOINT}" ]] || die "package build entrypoint not found or not executable: ${PACKAGE_BUILD_ENTRYPOINT}"
 
-"${PACKAGE_BUILD_ENTRYPOINT}"
+# Debian packages must be produced against Debian 13, not against whatever
+# distribution the orchestration host happens to run. Execute the entrypoint
+# inside the bootstrapped builder, mirroring iso.sh. The workspace is bound
+# read-write because the package scripts stage sources under .build/ and emit
+# .deb files under artifacts/packages/, both of which are ignored paths.
+if [[ "${SENTIA_PACKAGE_BUILD_IN_BUILDER:-1}" == "1" ]]; then
+  entrypoint_in_builder="/workspace${PACKAGE_BUILD_ENTRYPOINT#"${REPO_ROOT}"}"
+  [[ "${entrypoint_in_builder}" != "${PACKAGE_BUILD_ENTRYPOINT}" ]] ||
+    die "package build entrypoint must live inside the repository to run in the builder: ${PACKAGE_BUILD_ENTRYPOINT}"
+
+  SENTIA_BUILDER_WORKSPACE="${REPO_ROOT}" \
+  SENTIA_BUILDER_WORKSPACE_MODE=rw \
+  run_in_builder "build Debian packages" "
+set -euo pipefail
+export SENTIA_HEAVY_LOCK=/artifacts/.locks/heavy.lock
+exec '${entrypoint_in_builder}'
+"
+else
+  "${PACKAGE_BUILD_ENTRYPOINT}"
+fi
 
 require_dir_nonempty "${PACKAGE_INPUT_DIR}"
 

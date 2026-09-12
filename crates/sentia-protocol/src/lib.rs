@@ -19,10 +19,10 @@ pub use provider::{
     ProviderState, ProviderStatus,
 };
 pub use router::{
-    DataProvenance, DataSensitivity, IntegrationSocketDefaults, RequestPayload, RequestStatus,
-    ResultPayload, RouterCapability, RouterConfig, RouterRequest, RouterResult, RoutingPolicy,
-    SocketAccessScope, SocketEndpointPolicy, SocketEndpointRole, SocketMode, SocketPath,
-    SystemUser, HEALTH_METRICS_SOCKET_PATH_V1, INFERENCE_SOCKET_PATH_V1,
+    DataProvenance, DataSensitivity, IntegrationSocketDefaults, ProvenanceSource, RequestPayload,
+    RequestStatus, ResultPayload, RouterCapability, RouterConfig, RouterRequest, RouterResult,
+    RoutingPolicy, SocketAccessScope, SocketEndpointPolicy, SocketEndpointRole, SocketMode,
+    SocketPath, SystemUser, HEALTH_METRICS_SOCKET_PATH_V1, INFERENCE_SOCKET_PATH_V1,
     LOCAL_BROKER_SOCKET_PATH_V1, PROTOCOL_VERSION_V1, USER_ROUTER_SOCKET_TEMPLATE_V1,
 };
 pub use socket::{
