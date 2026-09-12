@@ -24,12 +24,22 @@ class ProtocolContractTests(unittest.TestCase):
             "diagnostics",
         }
         self.assertTrue(expected.issubset(operations))
+        self.assertIn("args", schema["properties"])
+        approval_props = schema["properties"]["approval"]["properties"]
+        self.assertIn("digest", approval_props)
+        self.assertIn("sessionhash", approval_props)
+        self.assertIn("planid", approval_props)
+        self.assertIn("expires_utc", approval_props)
 
     def test_broker_contract_execute_requires_approval_fields(self) -> None:
         contract = json.loads((PROTOCOL_DIR / "broker-contract.json").read_text())
         self.assertEqual(contract["method_version"], 1)
         self.assertEqual(contract["protocol_version"], "1.0")
-        self.assertEqual(contract["binary_path"], "/usr/libexec/sentia/sentia-apt")
+        self.assertEqual(contract["binary_path"], "/usr/libexec/sentia/sentia-apt-worker")
+        self.assertIn(
+            "/usr/libexec/sentia/sentia-apt",
+            contract["binary_compatibility_paths"],
+        )
         self.assertEqual(contract["runtime_limits"]["max_request_bytes"], 1048576)
         self.assertEqual(contract["runtime_limits"]["max_response_bytes"], 1048576)
         self.assertEqual(contract["runtime_limits"]["max_plan_retained_bytes"], 262144)
@@ -69,11 +79,15 @@ class ProtocolContractTests(unittest.TestCase):
         commands = json.loads((PROTOCOL_DIR / "commands.json").read_text())
         self.assertEqual(commands["method_version"], 1)
         self.assertEqual(commands["protocol_version"], "1.0")
-        self.assertEqual(commands["binary_path"], "/usr/libexec/sentia/sentia-apt")
+        self.assertEqual(commands["binary_path"], "/usr/libexec/sentia/sentia-apt-worker")
         self.assertIn("apt_install_execute", commands["commands"])
         execute_cmd = commands["commands"]["apt_install_execute"]
         self.assertEqual(execute_cmd["arguments"]["mode"], "execute")
         self.assertIn("approval", execute_cmd)
+        self.assertIn("apt_install_execute_compat_aliases", commands["commands"])
+        compat = commands["commands"]["apt_install_execute_compat_aliases"]
+        self.assertEqual(compat["args"]["mode"], "execute")
+        self.assertIn("digest", compat["approval"])
 
 
 if __name__ == "__main__":

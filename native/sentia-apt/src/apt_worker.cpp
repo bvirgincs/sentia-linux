@@ -163,6 +163,70 @@ std::string RequireStringField(const json& object, const std::string& field_name
   return text;
 }
 
+std::optional<std::string> OptionalStringAliasField(const json& object,
+                                                    const std::string& field_name,
+                                                    size_t max_length) {
+  if (!object.contains(field_name)) {
+    return std::nullopt;
+  }
+  const json& value = object.at(field_name);
+  if (!value.is_string()) {
+    throw WorkerError("schema_validation_failed",
+                      "Alias field must be a string",
+                      {{"field", field_name}});
+  }
+  const std::string text = value.get<std::string>();
+  if (text.empty() || text.size() > max_length) {
+    throw WorkerError("schema_validation_failed",
+                      "Alias string field length is out of bounds",
+                      {{"field", field_name},
+                       {"min_length", 1},
+                       {"max_length", max_length}});
+  }
+  return text;
+}
+
+std::string RequireStringAnyField(const json& object,
+                                  const std::vector<std::string>& field_names,
+                                  const std::string& logical_name,
+                                  size_t max_length) {
+  std::optional<std::string> chosen;
+  std::string chosen_field;
+  std::vector<std::string> present_fields;
+
+  for (const std::string& field_name : field_names) {
+    const std::optional<std::string> value =
+        OptionalStringAliasField(object, field_name, max_length);
+    if (!value.has_value()) {
+      continue;
+    }
+    present_fields.push_back(field_name);
+    if (!chosen.has_value()) {
+      chosen = value;
+      chosen_field = field_name;
+      continue;
+    }
+    if (chosen.value() != value.value()) {
+      throw WorkerError("schema_validation_failed",
+                        "Conflicting alias values for logical field",
+                        {{"logical_field", logical_name},
+                         {"first_field", chosen_field},
+                         {"first_value", chosen.value()},
+                         {"conflict_field", field_name},
+                         {"conflict_value", value.value()}});
+    }
+  }
+
+  if (!chosen.has_value()) {
+    throw WorkerError("schema_validation_failed",
+                      "Missing required aliased string field",
+                      {{"logical_field", logical_name},
+                       {"accepted_fields", field_names}});
+  }
+
+  return chosen.value();
+}
+
 std::string OptionalStringField(const json& object, const std::string& field_name,
                                 const std::string& default_value,
                                 size_t max_length) {
@@ -455,7 +519,42 @@ RequestEnvelope ParseRequest(const json& request) {
 
   RequestEnvelope envelope;
   envelope.request_id = RequireStringField(request, "request_id", kMaxRequestIdLength);
-  envelope.protocol_version = RequireStringField(request, "protocol_version", 16);
+
+  if (request.contains("protocol_version")) {
+    envelope.protocol_version = RequireStringField(request, "protocol_version", 16);
+  } else if (request.contains("version")) {
+    const json& version = request.at("version");
+    if (version.is_number_integer()) {
+      const int version_number = version.get<int>();
+      if (version_number == 1) {
+        envelope.protocol_version = kProtocolVersion;
+      } else {
+        throw WorkerError("unsupported_protocol_version",
+                          "numeric version is not supported",
+                          {{"provided", version_number},
+                           {"expected", 1}});
+      }
+    } else if (version.is_string()) {
+      const std::string version_text = version.get<std::string>();
+      if (version_text == "1" || version_text == "1.0") {
+        envelope.protocol_version = kProtocolVersion;
+      } else {
+        throw WorkerError("unsupported_protocol_version",
+                          "string version is not supported",
+                          {{"provided", version_text},
+                           {"expected", kProtocolVersion}});
+      }
+    } else {
+      throw WorkerError("schema_validation_failed",
+                        "version must be integer or string",
+                        {{"field", "version"}});
+    }
+  } else {
+    throw WorkerError("schema_validation_failed",
+                      "Missing required protocol version field",
+                      {{"accepted_fields", {"protocol_version", "version"}}});
+  }
+
   if (envelope.protocol_version != kProtocolVersion) {
     throw WorkerError("unsupported_protocol_version",
                       "protocol_version is not supported",
@@ -464,13 +563,25 @@ RequestEnvelope ParseRequest(const json& request) {
   }
 
   envelope.operation = NormalizeOperation(RequireStringField(request, "operation", 64));
-  if (!request.contains("arguments")) {
+  const bool has_arguments = request.contains("arguments");
+  const bool has_args = request.contains("args");
+
+  if (!has_arguments && !has_args) {
     envelope.arguments = json::object();
-  } else if (!request.at("arguments").is_object()) {
-    throw WorkerError("schema_validation_failed", "arguments must be an object",
-                      {{"field", "arguments"}});
   } else {
-    envelope.arguments = request.at("arguments");
+    if (has_arguments && !request.at("arguments").is_object()) {
+      throw WorkerError("schema_validation_failed", "arguments must be an object",
+                        {{"field", "arguments"}});
+    }
+    if (has_args && !request.at("args").is_object()) {
+      throw WorkerError("schema_validation_failed", "args must be an object",
+                        {{"field", "args"}});
+    }
+    if (has_arguments && has_args && request.at("arguments") != request.at("args")) {
+      throw WorkerError("schema_validation_failed",
+                        "arguments and args must match when both are provided");
+    }
+    envelope.arguments = has_arguments ? request.at("arguments") : request.at("args");
   }
 
   if (request.contains("approval")) {
@@ -494,16 +605,23 @@ ApprovalEnvelope ParseApproval(const RequestEnvelope& request) {
   const json& approval = request.approval.value();
 
   ApprovalEnvelope parsed;
-  parsed.plan_digest = RequireStringField(approval, "plan_digest", 64);
+  parsed.plan_digest = RequireStringAnyField(
+      approval, {"plan_digest", "digest"}, "plan_digest", 64);
   if (!std::regex_match(parsed.plan_digest, kSha256Pattern)) {
     throw WorkerError("schema_validation_failed",
-                      "approval.plan_digest must be a lowercase sha256 hex digest");
+                      "approval digest must be a lowercase sha256 hex digest",
+                      {{"logical_field", "plan_digest"}});
   }
-  parsed.broker_session_id =
-      RequireStringField(approval, "broker_session_id", 128);
-  parsed.authorization_id =
-      RequireStringField(approval, "authorization_id", 128);
-  parsed.expires_at = RequireStringField(approval, "expires_at", 64);
+  parsed.broker_session_id = RequireStringAnyField(
+      approval,
+      {"broker_session_id", "session_hash", "sessionhash", "broker_session_hash"},
+      "broker_session_id", 128);
+  parsed.authorization_id = RequireStringAnyField(
+      approval, {"authorization_id", "plan_id", "planid"},
+      "authorization_id", 128);
+  parsed.expires_at = RequireStringAnyField(
+      approval, {"expires_at", "expires_utc", "expiry_utc", "utc_expiry"},
+      "expires_at", 64);
 
   parsed.allow_source_change =
       OptionalBoolField(approval, "allow_source_change", false);

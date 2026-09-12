@@ -1,7 +1,7 @@
 {
   "method_version": 1,
   "protocol_version": "1.0",
-  "binary_path": "/usr/libexec/sentia/sentia-apt",
+  "binary_path": "/usr/libexec/sentia/sentia-apt-worker",
   "commands": {
     "apt_search": {
       "request_id": "req-search-001",
@@ -70,6 +70,26 @@
         "broker_session_id": "broker-session-1234",
         "authorization_id": "polkit-auth-5678",
         "expires_at": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "apt_install_execute_compat_aliases": {
+      "request_id": "req-install-execute-compat-001",
+      "version": 1,
+      "operation": "apt_install",
+      "args": {
+        "mode": "execute",
+        "packages": [
+          "docker.io"
+        ]
+      },
+      "approval": {
+        "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sessionhash": "broker-session-hash-1234",
+        "planid": "polkit-plan-nonce-5678",
+        "expires_utc": "2030-01-01T00:00:00Z",
         "allow_source_change": false,
         "allow_essential_removal": false,
         "allow_held_change": false

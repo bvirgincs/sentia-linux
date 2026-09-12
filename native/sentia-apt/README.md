@@ -24,7 +24,7 @@ Structured APT worker implemented in C++ on top of `libapt-pkg`.
 
 The broker-invoked binary path is fixed:
 
-- `/usr/libexec/sentia/sentia-apt`
+- `/usr/libexec/sentia/sentia-apt-worker`
 
 ## Build
 

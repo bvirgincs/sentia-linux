@@ -2,7 +2,10 @@
   "contract_name": "sentia-apt plan/execute broker contract",
   "method_version": 1,
   "protocol_version": "1.0",
-  "binary_path": "/usr/libexec/sentia/sentia-apt",
+  "binary_path": "/usr/libexec/sentia/sentia-apt-worker",
+  "binary_compatibility_paths": [
+    "/usr/libexec/sentia/sentia-apt"
+  ],
   "invocation": {
     "transport": "stdin/stdout",
     "framing": "single JSON request object in stdin; single JSON response object in stdout",
@@ -38,6 +41,39 @@
     "allow_essential_removal",
     "allow_held_change"
   ],
+  "request_aliases": {
+    "arguments": [
+      "arguments",
+      "args"
+    ],
+    "protocol_version": [
+      "protocol_version",
+      "version"
+    ]
+  },
+  "approval_aliases": {
+    "plan_digest": [
+      "plan_digest",
+      "digest"
+    ],
+    "broker_session_id": [
+      "broker_session_id",
+      "session_hash",
+      "sessionhash",
+      "broker_session_hash"
+    ],
+    "authorization_id": [
+      "authorization_id",
+      "plan_id",
+      "planid"
+    ],
+    "expires_at": [
+      "expires_at",
+      "expires_utc",
+      "expiry_utc",
+      "utc_expiry"
+    ]
+  },
   "plan_then_execute_flow": [
     "1) broker sends mode=plan request",
     "2) worker returns canonical_plan + plan_digest",
@@ -176,6 +212,27 @@
         "broker_session_id": "broker-session-1234",
         "authorization_id": "polkit-auth-5678",
         "expires_at": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "install_execute_request_compat_aliases": {
+      "request_id": "req-install-exec-compat-001",
+      "version": 1,
+      "operation": "apt_install",
+      "args": {
+        "mode": "execute",
+        "packages": [
+          "ripgrep",
+          "fd-find"
+        ]
+      },
+      "approval": {
+        "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sessionhash": "broker-session-hash-1234",
+        "planid": "polkit-plan-nonce-5678",
+        "expires_utc": "2030-01-01T00:00:00Z",
         "allow_source_change": false,
         "allow_essential_removal": false,
         "allow_held_change": false
