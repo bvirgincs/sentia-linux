@@ -100,6 +100,24 @@ run_in_builder "build live ISO" "${iso_build_command}"
 built_iso="$(find "${work_livebuild_dir}" -maxdepth 1 -type f -name '*.iso' | sort | tail -n 1 || true)"
 [[ -n "${built_iso}" ]] || die "live-build completed but no ISO was produced under ${work_livebuild_dir}"
 
+# live-build silently produces a bare Debian image when its package lists are
+# not where it expects them, which is indistinguishable from success without
+# this check. Assert every package requested by the chroot lists is actually in
+# the built filesystem.
+live_packages="${work_livebuild_dir}/binary/live/filesystem.packages"
+require_file "${live_packages}"
+missing_packages=()
+for package_list in "${LIVEBUILD_PACKAGE_LIST_DIR}"/*.list.chroot; do
+  while IFS= read -r requested_package; do
+    grep -q "^${requested_package} " "${live_packages}" ||
+      missing_packages+=("${requested_package}")
+  done < <(read_manifest_packages "${package_list}")
+done
+if [[ "${#missing_packages[@]}" -gt 0 ]]; then
+  die "live filesystem is missing requested packages: ${missing_packages[*]}"
+fi
+log "live filesystem package count: $(wc -l < "${live_packages}")"
+
 iso_output="${ISO_STAGE_DIR}/sentia-trixie-amd64.iso"
 cp -f "${built_iso}" "${iso_output}.tmp"
 mv "${iso_output}.tmp" "${iso_output}"

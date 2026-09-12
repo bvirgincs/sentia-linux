@@ -25,7 +25,7 @@ readonly DEFAULT_PACKAGE_INPUT_DIR="${REPO_ROOT}/artifacts/packages"
 readonly DEFAULT_REPOSITORY_OUTPUT_DIR="${REPO_ROOT}/artifacts/repository"
 readonly DEFAULT_SIGNING_HOME="${HOME}/.local/share/sentia-dev-signing"
 readonly DEFAULT_ARCHIVE_PUBLIC_KEYRING="${DEFAULT_SIGNING_HOME}/public/sentia-archive-keyring.gpg"
-readonly DEFAULT_LIVEBUILD_PACKAGE_LIST_DIR="${REPO_ROOT}/config/live-build/package-lists"
+readonly DEFAULT_LIVEBUILD_PACKAGE_LIST_DIR="${REPO_ROOT}/config/live-build/config/package-lists"
 readonly DEFAULT_CALAMARES_DIR="${REPO_ROOT}/config/calamares"
 readonly DEFAULT_ARCHIVE_SUITE="sentia-0.1"
 

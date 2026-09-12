@@ -77,7 +77,7 @@ SENTIA_SKIP_HOST_APT=1 SENTIA_SKIP_BUILDER_APT=1 make bootstrap
 
 - `build/input/packages/pool/` (package agent output)
 - `build/input/signing/public/sentia-archive-keyring.gpg` (signing agent output)
-- `config/live-build/package-lists/` (desktop/live-build agent-owned input)
+- `config/live-build/config/package-lists/` (desktop/live-build agent-owned input)
 - `tests/vm/test-install.sh` (VM installer automation harness)
 
 ## Build commands

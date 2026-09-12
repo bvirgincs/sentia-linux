@@ -39,9 +39,9 @@ if grep -Eqs '\.\./\.\./config' "$ROOT_DIR/packaging/desktop/debian/rules" "$ROO
     exit 1
 fi
 
-grep -q '^sentia-desktop$' "$ROOT_DIR/config/live-build/package-lists/sentia-desktop.list.chroot"
-grep -q '^sentia-calamares-settings$' "$ROOT_DIR/config/live-build/package-lists/sentia-desktop.list.chroot"
-grep -q '^sentia-live$' "$ROOT_DIR/config/live-build/package-lists/sentia-desktop.list.chroot"
+grep -q '^sentia-desktop$' "$ROOT_DIR/config/live-build/config/package-lists/sentia-desktop.list.chroot"
+grep -q '^sentia-calamares-settings$' "$ROOT_DIR/config/live-build/config/package-lists/sentia-desktop.list.chroot"
+grep -q '^sentia-live$' "$ROOT_DIR/config/live-build/config/package-lists/sentia-desktop.list.chroot"
 
 if [ -e "$ROOT_DIR/config/desktop/usr/share/applications/sentia-terminal.desktop" ] || \
    [ -e "$ROOT_DIR/config/desktop/usr/share/applications/sentia-system-monitor.desktop" ] || \
