@@ -1,10 +1,24 @@
 #!/usr/bin/make -f
 
+required_staged_config := \
+  debian/staged-config/usr/share/backgrounds/sentia/sentia-wallpaper.svg \
+  debian/staged-config/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
+
 %:
 	dh $@
 
+override_dh_auto_build:
+	for file in $(required_staged_config); do \
+	  if [ ! -f "$$file" ]; then \
+	    echo "Missing staged config input: $$file" >&2; \
+	    exit 1; \
+	  fi; \
+	done
+
 override_dh_auto_install:
 	install -d debian/sentia-desktop-settings
-	cp -a ../../config/desktop/usr debian/sentia-desktop-settings/
-	cp -a ../../config/desktop/etc debian/sentia-desktop-settings/
-	chmod 0755 debian/sentia-desktop-settings/usr/libexec/sentia-desktop/*
+	cp -a debian/staged-config/usr debian/sentia-desktop-settings/
+	cp -a debian/staged-config/etc debian/sentia-desktop-settings/
+
+execute_after_dh_builddeb:
+	rm -rf debian/staged-config

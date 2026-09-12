@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: sentia-live
-Source: https://github.com/sentia-linux/sentia-linux
+Source: https://github.com/bvirgincs/sentia-linux
 
 Files: *
 Copyright: 2026 Sentia contributors

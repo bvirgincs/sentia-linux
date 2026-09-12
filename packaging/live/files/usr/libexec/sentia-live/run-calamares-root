@@ -1,16 +1,26 @@
 #!/bin/sh
 set -eu
 
+FSTAB_PATH="${SENTIA_LIVE_FSTAB_PATH:-/etc/fstab}"
+BACKUP_PATH="${SENTIA_LIVE_FSTAB_BACKUP_PATH:-/etc/fstab.orig.sentia-live}"
+CALAMARES_COMMAND="${SENTIA_LIVE_CALAMARES_COMMAND:-/usr/bin/calamares}"
+
 cleanup() {
-    if [ -f /etc/fstab.orig.sentia-live ]; then
-        mv /etc/fstab.orig.sentia-live /etc/fstab
+    if [ -f "$BACKUP_PATH" ]; then
+        mv "$BACKUP_PATH" "$FSTAB_PATH"
     fi
 }
 
 trap cleanup EXIT
 
-if [ -f /etc/fstab ]; then
-    mv /etc/fstab /etc/fstab.orig.sentia-live
+if [ -f "$FSTAB_PATH" ]; then
+    mv "$FSTAB_PATH" "$BACKUP_PATH"
 fi
 
-exec /usr/bin/calamares "$@"
+set +e
+"$CALAMARES_COMMAND" "$@"
+status=$?
+set -e
+cleanup
+trap - EXIT
+exit "$status"

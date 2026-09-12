@@ -1,16 +1,16 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: sentia-calamares-settings
-Source: https://github.com/sentia-linux/sentia-linux
+Source: https://github.com/bvirgincs/sentia-linux
 
-Files: ../../config/calamares/helpers/*
-       ../../config/calamares/calamares/settings.conf
-       ../../config/calamares/calamares/modules/*
-       ../../config/calamares/calamares-modules/*/module.desc
+Files: debian/staged-config/helpers/*
+       debian/staged-config/calamares/settings.conf
+       debian/staged-config/calamares/modules/*
+       debian/staged-config/calamares-modules/*/module.desc
 Copyright: 2016-2026 Jonathan Carter <jcc@debian.org>
            2026 Sentia contributors
 License: ISC
 
-Files: ../../config/calamares/calamares/branding/sentia/*
+Files: debian/staged-config/calamares/branding/sentia/*
 Copyright: 2026 Sentia contributors
 License: Apache-2.0
 

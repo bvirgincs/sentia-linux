@@ -5,7 +5,7 @@ Maintainer: Sentia Developers <sentia-devel@invalid>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
-Homepage: https://github.com/sentia-linux/sentia-linux
+Homepage: https://github.com/bvirgincs/sentia-linux
 
 Package: sentia-live
 Architecture: all

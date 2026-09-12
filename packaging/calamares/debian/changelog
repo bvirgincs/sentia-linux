@@ -1,3 +1,15 @@
+sentia-calamares-settings (0.1.0-2) unstable; urgency=medium
+
+  * Remove media-source apt update flow from installer sequence.
+  * Validate required Sentia key/archive/source configuration fail-closed.
+  * Require UEFI mode and signed bootloader packages already in target.
+  * Stop forcing runtime service enablement and stop swallowing cleanup errors.
+  * Use isolated staged-config inputs in debian/rules.
+  * Make sentia-archive-keyring a hard dependency.
+  * Update package homepage URL.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 19:15:00 +0000
+
 sentia-calamares-settings (0.1.0-1) unstable; urgency=medium
 
   * Initial Sentia Calamares settings based on Debian trixie defaults.
