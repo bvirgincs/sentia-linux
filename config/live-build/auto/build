@@ -5,4 +5,37 @@ set -euo pipefail
 export SOURCE_DATE_EPOCH
 export MAKEFLAGS="${MAKEFLAGS:--j2}"
 
-lb build noauto --build-with-chroot true
+# Path inside the live-build chroot; kept in sync with build/scripts/iso.sh.
+build_archive_path="/srv/sentia-build-archive"
+
+overlay_source="$(pwd)/sentia-overlay-archive"
+overlay_keyring="$(pwd)/sentia-archive-keyring.gpg"
+overlay_target="chroot${build_archive_path}"
+
+# `lb build` is expanded into its phases so the signed Sentia overlay can be
+# placed inside the live-build chroot. That chroot does not inherit the outer
+# builder's bind mounts, so the archive has to be copied in after debootstrap
+# and before chroot_archives runs `apt-get update` against it.
+lb bootstrap noauto
+
+[[ -d "${overlay_source}" ]] || {
+  echo "ERROR: staged overlay archive missing: ${overlay_source}" >&2
+  exit 1
+}
+[[ -f "${overlay_keyring}" ]] || {
+  echo "ERROR: staged overlay keyring missing: ${overlay_keyring}" >&2
+  exit 1
+}
+
+mkdir -p "${overlay_target}" chroot/usr/share/keyrings
+cp -a "${overlay_source}/." "${overlay_target}/"
+install -m 0644 "${overlay_keyring}" chroot/usr/share/keyrings/sentia-archive-keyring.gpg
+
+lb chroot noauto
+
+# The build-time archive must not reach the shipped filesystem. Installed
+# systems get their local archive from sentia-offline-repository.
+rm -rf "${overlay_target}"
+
+lb installer noauto
+lb binary noauto

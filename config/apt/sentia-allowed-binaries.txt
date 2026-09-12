@@ -5,6 +5,7 @@ sentia-release
 sentia-archive-keyring
 sentia-base
 sentia-desktop
+sentia-desktop-settings
 sentia-ai
 sentia-llama-cpp
 sentia-granite-model

@@ -9,6 +9,7 @@ exec > >(tee -a "${iso_log}") 2>&1
 
 log "iso log: ${iso_log}"
 
+require_command rsync
 require_dir_nonempty "${LIVEBUILD_PACKAGE_LIST_DIR}"
 shopt -s nullglob
 package_lists=("${LIVEBUILD_PACKAGE_LIST_DIR}"/*.list.chroot "${LIVEBUILD_PACKAGE_LIST_DIR}"/*.list.binary)
@@ -16,13 +17,17 @@ if [[ "${#package_lists[@]}" -eq 0 ]]; then
   die "live-build package lists are missing (*.list.chroot or *.list.binary) in ${LIVEBUILD_PACKAGE_LIST_DIR}"
 fi
 
-release_suite="${SENTIA_RELEASE_SUITE:-sentia-trixie-0.1}"
+release_suite="${ARCHIVE_SUITE}"
 repo_publish_dir="${REPO_STAGE_DIR}/publish"
 repo_dists_dir="${repo_publish_dir}/dists/${release_suite}"
 [[ -d "${repo_dists_dir}" ]] || die "signed overlay repo metadata not found: ${repo_dists_dir}; run make repo first"
 
 repo_keyring="${REPO_STAGE_DIR}/public/sentia-archive-keyring.gpg"
 require_file "${repo_keyring}"
+
+# In-chroot location of the build-time overlay archive; auto/build stages and
+# removes it at this same path.
+readonly SENTIA_BUILD_ARCHIVE_PATH="/srv/sentia-build-archive"
 
 work_livebuild_dir="${WORK_DIR}/live-build"
 run_heavy "reset live-build work directory" sudo bash -lc "
@@ -33,21 +38,24 @@ mkdir -p '${work_livebuild_dir}'
 
 rsync -a --delete "${REPO_ROOT}/config/live-build/" "${work_livebuild_dir}/"
 
+# live-build builds its own chroot, which does not inherit the outer builder's
+# bind mounts. Stage the signed overlay inside the live-build tree so auto/build
+# can copy it into that chroot before packages are installed. The sources entry
+# is .list.chroot only: it is build-time trust, and live-build drops it from the
+# shipped image. The installed system gets its archive from
+# sentia-offline-repository instead.
+overlay_stage_dir="${work_livebuild_dir}/sentia-overlay-archive"
+rm -rf "${overlay_stage_dir}"
+mkdir -p "${overlay_stage_dir}"
+rsync -a --delete "${repo_publish_dir}/" "${overlay_stage_dir}/"
+cp -f "${repo_keyring}" "${work_livebuild_dir}/sentia-archive-keyring.gpg"
+
 mkdir -p "${work_livebuild_dir}/config/archives"
 cat > "${work_livebuild_dir}/config/archives/sentia-overlay.list.chroot.tmp" <<EOF_CHROOT
-deb [signed-by=/usr/share/keyrings/sentia-archive-keyring.gpg] file:/artifacts/repo/publish ${release_suite} main
+deb [signed-by=/usr/share/keyrings/sentia-archive-keyring.gpg] file:${SENTIA_BUILD_ARCHIVE_PATH} ${release_suite} main
 EOF_CHROOT
 mv "${work_livebuild_dir}/config/archives/sentia-overlay.list.chroot.tmp" \
   "${work_livebuild_dir}/config/archives/sentia-overlay.list.chroot"
-
-cat > "${work_livebuild_dir}/config/archives/sentia-overlay.list.binary.tmp" <<EOF_BINARY
-deb [signed-by=/usr/share/keyrings/sentia-archive-keyring.gpg] file:/artifacts/repo/publish ${release_suite} main
-EOF_BINARY
-mv "${work_livebuild_dir}/config/archives/sentia-overlay.list.binary.tmp" \
-  "${work_livebuild_dir}/config/archives/sentia-overlay.list.binary"
-
-mkdir -p "${work_livebuild_dir}/config/includes.chroot/usr/share/keyrings"
-cp -f "${repo_keyring}" "${work_livebuild_dir}/config/includes.chroot/usr/share/keyrings/sentia-archive-keyring.gpg"
 
 epoch="$(source_date_epoch)"
 

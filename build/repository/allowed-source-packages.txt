@@ -2,3 +2,6 @@ base-files
 sentia-core
 sentia-archive-keyring
 sentia-offline-repository
+sentia-desktop
+sentia-calamares-settings
+sentia-live
