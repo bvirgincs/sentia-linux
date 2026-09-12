@@ -59,4 +59,18 @@ fn required_registry_contains_all_tools_without_unsafe_names() {
             .all(|tool| tool.name.as_str() != "client_approved_authority"),
         "registry must not trust client-approved authority flags"
     );
+    assert!(
+        registry.tools.iter().all(|tool| {
+            tool.input_schema_ref
+                == "schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request"
+        }),
+        "all tools should use shared ToolRequest schema"
+    );
+    assert!(
+        registry.tools.iter().all(|tool| {
+            tool.output_schema_ref
+                == "schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result"
+        }),
+        "all tools should use shared ToolResult schema"
+    );
 }

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json",
-  "title": "Sentia Structured Tool Invocation v1",
-  "description": "Shared typed invocation/result envelope for registered tools.",
+  "title": "Sentia ToolRequest / ToolResult v1",
+  "description": "Shared typed invocation/result envelope using generic {name,args} and {data,evidence,error}.",
   "$defs": {
     "tool_name": {
       "$ref": "tool-registry-v1.schema.json#/$defs/tool_name"
@@ -125,7 +125,20 @@
           "maxItems": 32,
           "items": { "$ref": "#/$defs/evidence_pointer" }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "ok" } }
+          },
+          "then": {
+            "properties": { "error": false }
+          },
+          "else": {
+            "required": ["error"]
+          }
+        }
+      ]
     }
   },
   "oneOf": [
