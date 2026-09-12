@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sentia System Monitor
+Comment=View Sentia health metrics
+Exec=sentia-monitor
+Icon=sentia-monitor
+Terminal=false
+Categories=System;Monitor;
+StartupNotify=true

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Sentia Monitor">
+  <rect x="12" y="18" width="104" height="92" rx="10" fill="#1f2335"/>
+  <polyline points="24,78 40,78 50,56 62,92 74,66 86,66 100,48" fill="none" stroke="#53d6a7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
