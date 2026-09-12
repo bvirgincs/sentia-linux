@@ -3,8 +3,14 @@
 ## Current checkpoint
 
 No runtime, integration, VM, or installer tests have been executed in this
-worktree yet. This checkpoint only establishes the documentation and agent
-profiles that future tests will refer to.
+worktree yet. The artifact integrity utility has an executable focused suite:
+
+```sh
+python3 -m unittest discover -s tests/release -p 'test_*.py' -v
+```
+
+Seventeen tests currently pass. They establish byte-integrity and failure
+handling, not that an ISO boots or installs.
 
 ## Planned validation interface
 
@@ -31,15 +37,13 @@ worktree and must not be reported as completed here.
 - Keep evidence under ignored `artifacts/<build-id>/` paths.
 - Distinguish planned validation from executed validation.
 
-## This checkpoint
-
-Only static document and YAML-frontmatter validation is appropriate here.
-
 ## Checkpoint validation already run
 
 - `git diff --check`
 - `python3` with PyYAML to parse every `.github/agents/*.agent.md` frontmatter
   block
+- The artifact integrity suite above, including collision/non-clobber,
+  malformed and oversized manifest, FIFO rejection, and cleanup-failure cases
 
 ## Acceptance manifest status
 

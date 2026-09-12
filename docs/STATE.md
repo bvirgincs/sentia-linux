@@ -1,8 +1,8 @@
 # State
 
 ```yaml
-checkpoint: foundation
-source: initial-source-only
+checkpoint: foundation-and-artifact-tools
+source: partial-implementation
 runtime: not-tested
 integration: not-tested
 release: not-qualified
@@ -15,6 +15,9 @@ release: not-qualified
 - Developer-facing README guidance for the planned `make` interface.
 - Honest state and decision documentation.
 - Custom agent profiles under `.github/agents/`.
+- Streaming release artifact splitting, verification, and exact reconstruction.
+  Seventeen focused tests pass, including corruption, non-clobbering output,
+  bounded manifest reads, and cleanup-failure handling.
 - A pending reference to the contract-engineer-owned canonical acceptance
   manifest; no local acceptance schema is implemented here.
 
@@ -33,6 +36,6 @@ release: not-qualified
 
 ## Honest summary
 
-This worktree establishes the foundation docs only. It does not yet validate
-the runtime, integration, installation, or release gates described in the
-plan.
+The merged source contains foundation documents and build-host artifact
+utilities. The runtime, installer, and image pipeline are being implemented in
+isolated worktrees and have not yet passed the release gates.
