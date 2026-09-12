@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import importlib.util
 import json
 import os
@@ -9,6 +10,7 @@ import sys
 import uuid
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -80,6 +82,9 @@ class ReleaseArtifactCLITests(unittest.TestCase):
     def rewrite_manifest(self, manifest: Path, data: dict) -> None:
         manifest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
+    def fixed_uuid(self, hex_value: str = "11111111111111111111111111111111") -> uuid.UUID:
+        return uuid.UUID(hex=hex_value)
+
     def test_help_mentions_subcommands(self) -> None:
         result = self.run_cli("--help")
         self.assertEqual(result.returncode, 0)
@@ -116,6 +121,124 @@ class ReleaseArtifactCLITests(unittest.TestCase):
         )
         self.assertIn("joined", join.stdout.lower())
         self.assertEqual(output.read_bytes(), payload)
+
+    def test_manifest_byte_limit_rejected_before_json_load(self) -> None:
+        work = self.workspace("manifest_limit")
+        manifest = work / "oversize.json"
+        manifest.write_bytes(b"{" + (b"x" * MODULE.MAX_MANIFEST_BYTES))
+        with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+            MODULE.load_manifest(manifest)
+        self.assertIn("exceeds", str(ctx.exception).lower())
+
+    def test_part_count_limit_rejected_before_split(self) -> None:
+        work = self.workspace("part_count_limit")
+        source = work / "bundle.iso"
+        source.write_bytes(b"x" * (MODULE.MAX_PART_COUNT + 1))
+        parts_dir = work / "parts"
+        parts_dir.mkdir()
+        with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+            MODULE.split_artifact(source, parts_dir, chunk_size=1)
+        self.assertIn("parts", str(ctx.exception).lower())
+        self.assertEqual(list(parts_dir.iterdir()), [])
+
+    def test_split_temp_collision_preserves_existing_manifest_file(self) -> None:
+        work = self.workspace("split_temp_collision")
+        source = work / "bundle.iso"
+        source.write_bytes(b"split temp collision payload")
+        parts_dir = work / "parts"
+        parts_dir.mkdir()
+        fixed = self.fixed_uuid()
+        temp_manifest = parts_dir / f".{source.name}.manifest.{fixed.hex}.json.tmp"
+        sentinel = "keep this manifest temp file"
+        temp_manifest.write_text(sentinel, encoding="utf-8")
+
+        with patch.object(MODULE.uuid, "uuid4", return_value=fixed):
+            with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+                MODULE.split_artifact(source, parts_dir, chunk_size=4)
+
+        self.assertIn("temporary manifest", str(ctx.exception).lower())
+        self.assertTrue(temp_manifest.exists())
+        self.assertEqual(temp_manifest.read_text(encoding="utf-8"), sentinel)
+        self.assertEqual(list(parts_dir.glob(f"{source.name}.part*")), [])
+
+    def test_join_temp_collision_preserves_existing_output_symlink(self) -> None:
+        work, source, _, parts_dir, manifest, _ = self.make_fixture(chunk_size=9)
+        fixed = self.fixed_uuid("22222222222222222222222222222222")
+        output = work / "joined.iso"
+        temp_output = work / f".{output.name}.join.{fixed.hex}.tmp"
+        sentinel = work / "join-temp-sentinel.txt"
+        sentinel.write_text("keep this symlink target", encoding="utf-8")
+        os.symlink(sentinel, temp_output)
+
+        with patch.object(MODULE.uuid, "uuid4", return_value=fixed):
+            with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+                MODULE.join_artifact(manifest, output, parts_dir)
+
+        self.assertIn("temporary output", str(ctx.exception).lower())
+        self.assertTrue(temp_output.is_symlink())
+        self.assertEqual(os.readlink(temp_output), str(sentinel))
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep this symlink target")
+
+    def test_source_open_failure_is_explicit(self) -> None:
+        work = self.workspace("source_open_failure")
+        source = work / "bundle.iso"
+        source.write_bytes(b"abcde")
+        parts_dir = work / "parts"
+        parts_dir.mkdir()
+        real_open = Path.open
+
+        def fake_open(path_obj: Path, mode: str = "r", *args, **kwargs):
+            if path_obj == source and "rb" in mode:
+                raise OSError(errno.EACCES, "simulated source open failure")
+            return real_open(path_obj, mode, *args, **kwargs)
+
+        with patch.object(Path, "open", new=fake_open):
+            with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+                MODULE.split_artifact(source, parts_dir, chunk_size=2)
+
+        self.assertIn("cannot read source file", str(ctx.exception).lower())
+        self.assertEqual(list(parts_dir.iterdir()), [])
+
+    def test_source_read_failure_cleans_owned_partials(self) -> None:
+        work = self.workspace("source_read_failure")
+        source = work / "bundle.iso"
+        source.write_bytes(b"abcdefghij")
+        parts_dir = work / "parts"
+        parts_dir.mkdir()
+        real_open = Path.open
+
+        class FailingReadHandle:
+            def __init__(self, handle):
+                self._handle = handle
+                self._reads = 0
+
+            def read(self, size=-1):
+                self._reads += 1
+                if self._reads > 1:
+                    raise OSError(errno.EIO, "simulated source read failure")
+                return self._handle.read(size)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return self._handle.__exit__(exc_type, exc, tb)
+
+            def __getattr__(self, name):
+                return getattr(self._handle, name)
+
+        def fake_open(path_obj: Path, mode: str = "r", *args, **kwargs):
+            if path_obj == source and "rb" in mode:
+                return FailingReadHandle(real_open(path_obj, mode, *args, **kwargs))
+            return real_open(path_obj, mode, *args, **kwargs)
+
+        with patch.object(Path, "open", new=fake_open):
+            with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+                MODULE.split_artifact(source, parts_dir, chunk_size=4)
+
+        self.assertIn("cannot read source file", str(ctx.exception).lower())
+        self.assertEqual(list(parts_dir.glob(f"{source.name}.part*")), [])
+        self.assertEqual(list(parts_dir.glob(f".{source.name}.manifest.*.tmp")), [])
 
     def test_corruption_detected(self) -> None:
         _, source, payload, parts_dir, manifest, manifest_data = self.make_fixture(chunk_size=13)

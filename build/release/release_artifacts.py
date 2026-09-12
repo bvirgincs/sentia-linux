@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
 import hashlib
 import json
 import os
@@ -16,6 +15,10 @@ from pathlib import Path
 
 MANIFEST_VERSION = 1
 MAX_PART_SIZE = 1 << 30
+# Reserve one of GitHub's 1000 release-asset slots for the manifest alongside parts.
+MAX_PART_COUNT = 999
+# Keep manifest parsing bounded well below GitHub's asset ceiling.
+MAX_MANIFEST_BYTES = 1 << 20
 BUFFER_SIZE = 1 << 20
 PART_INDEX_WIDTH = 12
 
@@ -158,18 +161,30 @@ def _validate_existing_directory(path: Path, field: str) -> None:
         raise ReleaseArtifactError(f"{field} {path} must be a directory")
 
 
+def _cleanup_owned_paths(paths: list[Path]) -> list[str]:
+    errors: list[str] = []
+    for path in reversed(paths):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            errors.append(f"{path}: {exc.strerror or exc}")
+    return errors
+
+
+def _raise_with_cleanup(primary: ReleaseArtifactError, cleanup_errors: list[str]) -> None:
+    if cleanup_errors:
+        raise ReleaseArtifactError(f"{primary}; cleanup errors: {', '.join(cleanup_errors)}") from primary
+    raise primary
+
+
 def part_name_for(basename: str, index: int) -> str:
     return f"{basename}.part{index:0{PART_INDEX_WIDTH}d}"
 
 
 def manifest_path_for(output_dir: Path, basename: str) -> Path:
     return output_dir / f"{basename}.manifest.json"
-
-
-def _cleanup_paths(paths: list[Path]) -> None:
-    for path in reversed(paths):
-        with contextlib.suppress(FileNotFoundError, OSError):
-            path.unlink()
 
 
 def _manifest_json_text(manifest: ManifestRecord) -> str:
@@ -200,6 +215,10 @@ def _manifest_record_from_data(data: object) -> ManifestRecord:
     parts_raw = data["parts"]
     if type(parts_raw) is not list:
         raise ReleaseArtifactError(f"parts must be a JSON array, not {_type_name(parts_raw)}")
+    if len(parts_raw) > MAX_PART_COUNT:
+        raise ReleaseArtifactError(
+            f"manifest contains {len(parts_raw)} parts, exceeds {MAX_PART_COUNT}-part limit"
+        )
 
     parts: list[PartRecord] = []
     seen_names: set[str] = set()
@@ -245,9 +264,17 @@ def _manifest_record_from_data(data: object) -> ManifestRecord:
 def load_manifest(manifest_path: Path | str) -> ManifestRecord:
     path = Path(manifest_path)
     try:
-        raw_text = path.read_text(encoding="utf-8")
+        stat_result = path.stat()
     except FileNotFoundError as exc:
         raise ReleaseArtifactError(f"manifest file {path} does not exist") from exc
+    except OSError as exc:
+        raise ReleaseArtifactError(f"cannot stat manifest file {path}: {exc.strerror or exc}") from exc
+    if stat_result.st_size > MAX_MANIFEST_BYTES:
+        raise ReleaseArtifactError(
+            f"manifest file {path} is {stat_result.st_size} bytes, exceeds {MAX_MANIFEST_BYTES}-byte limit"
+        )
+    try:
+        raw_text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
         raise ReleaseArtifactError(f"manifest file {path} is not valid UTF-8") from exc
     except OSError as exc:
@@ -365,13 +392,20 @@ def split_artifact(
     _validate_existing_directory(output_base, "output directory")
 
     basename = source.name
-    manifest = None
     created_paths: list[Path] = []
+    try:
+        source_size = source.stat().st_size
+    except OSError as exc:
+        raise ReleaseArtifactError(f"cannot stat source file {source}: {exc.strerror or exc}") from exc
+    required_part_count = 0 if source_size == 0 else (source_size + chunk_size - 1) // chunk_size
+    if required_part_count > MAX_PART_COUNT:
+        raise ReleaseArtifactError(
+            f"split would create {required_part_count} parts, exceeds {MAX_PART_COUNT}-part limit"
+        )
+
     source_hasher = hashlib.sha256()
     parts: list[PartRecord] = []
     total = 0
-    source_size = source.stat().st_size
-
     try:
         with source.open("rb") as source_handle:
             part_index = 1
@@ -412,15 +446,20 @@ def split_artifact(
                 part_index += 1
                 if part_size < chunk_size:
                     break
-    except ReleaseArtifactError:
-        _cleanup_paths(created_paths)
-        raise
+    except OSError as exc:
+        primary_error = ReleaseArtifactError(f"cannot read source file {source}: {exc.strerror or exc}")
+        cleanup_errors = _cleanup_owned_paths(created_paths)
+        _raise_with_cleanup(primary_error, cleanup_errors)
+    except ReleaseArtifactError as exc:
+        cleanup_errors = _cleanup_owned_paths(created_paths)
+        _raise_with_cleanup(exc, cleanup_errors)
 
     if total != source_size:
-        _cleanup_paths(created_paths)
-        raise ReleaseArtifactError(
+        primary_error = ReleaseArtifactError(
             f"source file changed during split: expected {source_size} bytes, read {total}"
         )
+        cleanup_errors = _cleanup_owned_paths(created_paths)
+        _raise_with_cleanup(primary_error, cleanup_errors)
 
     manifest = ManifestRecord(
         manifest_version=MANIFEST_VERSION,
@@ -435,12 +474,12 @@ def split_artifact(
 
     manifest_path = manifest_path_for(output_base, basename)
     temp_manifest_path = output_base / f".{basename}.manifest.{uuid.uuid4().hex}.json.tmp"
-    created_paths.append(temp_manifest_path)
 
     try:
         manifest_text = _manifest_json_text(manifest)
         try:
             with temp_manifest_path.open("x", encoding="utf-8", newline="\n") as handle:
+                created_paths.append(temp_manifest_path)
                 handle.write(manifest_text)
                 handle.flush()
                 os.fsync(handle.fileno())
@@ -458,12 +497,17 @@ def split_artifact(
             raise ReleaseArtifactError(f"refusing to overwrite existing manifest {manifest_path}") from exc
         except OSError as exc:
             raise ReleaseArtifactError(f"cannot publish manifest {manifest_path}: {exc.strerror or exc}") from exc
-    except ReleaseArtifactError:
-        _cleanup_paths(created_paths)
-        raise
-
-    with contextlib.suppress(FileNotFoundError, OSError):
-        temp_manifest_path.unlink()
+        try:
+            temp_manifest_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise ReleaseArtifactError(
+                f"cleanup failed removing temporary manifest {temp_manifest_path}: {exc.strerror or exc}"
+            ) from exc
+    except ReleaseArtifactError as exc:
+        cleanup_errors = _cleanup_owned_paths(created_paths)
+        _raise_with_cleanup(exc, cleanup_errors)
 
     return SplitOutcome(manifest_path=manifest_path, manifest=manifest)
 
@@ -484,7 +528,7 @@ def join_artifact(
     _validate_existing_directory(final_parent, "output directory")
 
     temp_output = final_parent / f".{final_output.name}.join.{uuid.uuid4().hex}.tmp"
-    created_paths = [temp_output]
+    created_paths: list[Path] = []
     full_hasher = hashlib.sha256()
 
     try:
@@ -495,6 +539,7 @@ def join_artifact(
         except OSError as exc:
             raise ReleaseArtifactError(f"cannot create temporary output {temp_output}: {exc.strerror or exc}") from exc
 
+        created_paths.append(temp_output)
         with output_handle_cm as output_handle:
             for part in manifest.parts:
                 _verify_part_stream(parts_base / part.name, part, full_hasher, output_handle)
@@ -513,12 +558,22 @@ def join_artifact(
             raise ReleaseArtifactError(f"refusing to overwrite existing output file {final_output}") from exc
         except OSError as exc:
             raise ReleaseArtifactError(f"cannot publish output file {final_output}: {exc.strerror or exc}") from exc
-    except ReleaseArtifactError:
-        _cleanup_paths(created_paths)
+    except ReleaseArtifactError as exc:
+        cleanup_errors = _cleanup_owned_paths(created_paths)
+        if cleanup_errors:
+            raise ReleaseArtifactError(
+                f"{exc}; cleanup errors: {', '.join(cleanup_errors)}"
+            ) from exc
         raise
 
-    with contextlib.suppress(FileNotFoundError, OSError):
+    try:
         temp_output.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        raise ReleaseArtifactError(
+            f"cleanup failed removing temporary output {temp_output}: {exc.strerror or exc}"
+        ) from exc
 
     return final_output
 
