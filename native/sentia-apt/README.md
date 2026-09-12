@@ -64,3 +64,33 @@ Shared v1 contract dependency:
 `request.schema.json` and `response.schema.json` are interop wrappers that
 reference shared `tool-invocation-v1` request/result definitions and keep
 legacy envelopes for broker compatibility during transition.
+
+## Command-not-found lookup contract (read-only)
+
+Use `operation=package_owns_file` for authoritative offline command-to-package
+lookup (no automatic execution).
+
+Request (stdin JSON):
+
+```json
+{
+  "request_id": "cnf-lookup-001",
+  "protocol_version": "1.0",
+  "operation": "package_owns_file",
+  "arguments": {
+    "file_path": "docker",
+    "index_path": "/usr/share/sentia/command-index/command-index.json"
+  }
+}
+```
+
+Response result fields:
+- `file_path`, `command`, `found`
+- `packages[]`, `paths[]`
+- `index_path`, `index_generated_at`
+- `provenance` (suite/snapshot/source_uri/contents hashes)
+
+Interactive guidance:
+- client timeout: 2000ms
+- on timeout/error: return no package suggestion and continue deterministic
+  fallback flow (never auto-install).

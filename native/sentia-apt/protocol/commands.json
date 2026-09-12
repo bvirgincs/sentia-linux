@@ -151,6 +151,16 @@
         "file_path": "/usr/bin/docker"
       }
     },
+    "package_owns_file_command_not_found": {
+      "request_id": "req-cnf-lookup-001",
+      "protocol_version": "1.0",
+      "operation": "package_owns_file",
+      "arguments": {
+        "file_path": "docker",
+        "index_path": "/usr/share/sentia/command-index/command-index.json"
+      },
+      "timeout_ms": 2000
+    },
     "diagnostics": {
       "request_id": "req-diag-001",
       "protocol_version": "1.0",

@@ -1550,6 +1550,10 @@ json HandlePackageOwnsFile(const RequestEnvelope& request) {
             {"packages", json::array()},
             {"paths", json::array()},
             {"index_path", index_path},
+            {"index_generated_at",
+             command_index.contains("generated_at")
+                 ? command_index.at("generated_at")
+                 : json(nullptr)},
             {"provenance",
              command_index.contains("provenance") ? command_index.at("provenance")
                                                   : json(nullptr)}};
@@ -1569,6 +1573,9 @@ json HandlePackageOwnsFile(const RequestEnvelope& request) {
                                                   : json::array()},
           {"paths", match.contains("paths") ? match.at("paths") : json::array()},
           {"index_path", index_path},
+          {"index_generated_at",
+           command_index.contains("generated_at") ? command_index.at("generated_at")
+                                                  : json(nullptr)},
           {"provenance",
            command_index.contains("provenance") ? command_index.at("provenance")
                                                 : json(nullptr)}};

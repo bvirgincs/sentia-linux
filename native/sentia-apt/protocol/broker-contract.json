@@ -187,6 +187,51 @@
       }
     }
   },
+  "command_not_found_lookup_contract": {
+    "operation": "package_owns_file",
+    "description": "Authoritative offline command->package lookup for deterministic command-not-found UX. Read-only; never executes package actions.",
+    "request": {
+      "request_id": "string <= 128",
+      "protocol_version": "1.0",
+      "operation": "package_owns_file",
+      "arguments": {
+        "file_path": "required string; accepts missing command token (e.g. 'rg') or full path (e.g. '/usr/bin/rg')",
+        "index_path": "optional explicit command index path; defaults to /usr/share/sentia/command-index/command-index.json"
+      }
+    },
+    "response_result_fields": [
+      "file_path",
+      "command",
+      "found",
+      "packages",
+      "paths",
+      "index_path",
+      "index_generated_at",
+      "provenance"
+    ],
+    "provenance_freshness_fields": [
+      "result.index_generated_at",
+      "result.provenance.suite",
+      "result.provenance.snapshot",
+      "result.provenance.source_uri",
+      "result.provenance.contents_files[].sha256"
+    ],
+    "error_codes": [
+      "command_index_missing",
+      "command_index_too_large",
+      "command_index_unreadable",
+      "command_index_invalid_json",
+      "command_index_invalid_schema",
+      "schema_validation_failed",
+      "request_too_large",
+      "invalid_json",
+      "unsupported_protocol_version"
+    ],
+    "interactive_timeout_guidance": {
+      "lookup_timeout_ms": 2000,
+      "fallback_behavior": "On timeout or error, emit no package suggestion and continue deterministic shell flow without automatic execution."
+    }
+  },
   "plan_response_minimum": {
     "status": "ok",
     "result_fields": [

@@ -56,6 +56,11 @@ class WorkerSourceGuardTests(unittest.TestCase):
         self.assertIn('request.contains("args")', source)
         self.assertIn('"sentia.v1"', source)
 
+    def test_package_lookup_returns_freshness_metadata(self) -> None:
+        source = WORKER_CPP.read_text(encoding="utf-8")
+        self.assertIn('"index_generated_at"', source)
+        self.assertIn('command_index.contains("generated_at")', source)
+
     def test_execute_re_resolves_under_native_locks(self) -> None:
         execute_block = self._handle_execute_block()
         self.assertIn(

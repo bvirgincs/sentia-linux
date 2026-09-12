@@ -123,6 +123,14 @@ class ProtocolContractTests(unittest.TestCase):
             rules,
         )
 
+    def test_command_not_found_lookup_contract(self) -> None:
+        contract = json.loads((PROTOCOL_DIR / "broker-contract.json").read_text())
+        cnf = contract["command_not_found_lookup_contract"]
+        self.assertEqual(cnf["operation"], "package_owns_file")
+        self.assertEqual(cnf["interactive_timeout_guidance"]["lookup_timeout_ms"], 2000)
+        self.assertIn("result.index_generated_at", cnf["provenance_freshness_fields"])
+        self.assertIn("command_index_missing", cnf["error_codes"])
+
     def test_commands_file_contains_execute_example(self) -> None:
         commands = json.loads((PROTOCOL_DIR / "commands.json").read_text())
         self.assertEqual(commands["method_version"], 1)
@@ -136,6 +144,10 @@ class ProtocolContractTests(unittest.TestCase):
         compat = commands["commands"]["apt_install_execute_compat_aliases"]
         self.assertEqual(compat["args"]["mode"], "execute")
         self.assertIn("digest", compat["approval"])
+        cnf = commands["commands"]["package_owns_file_command_not_found"]
+        self.assertEqual(cnf["operation"], "package_owns_file")
+        self.assertEqual(cnf["arguments"]["file_path"], "docker")
+        self.assertEqual(cnf["timeout_ms"], 2000)
 
 
 if __name__ == "__main__":
