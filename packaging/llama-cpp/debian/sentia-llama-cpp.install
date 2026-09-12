@@ -1,4 +1,11 @@
-config/llama/sentia-local.env etc/sentia/llama/
-config/systemd/sentia-local-llama.service lib/systemd/system/
-config/systemd/sentia-local-llama-readiness.service lib/systemd/system/
-build/runtime/probe_llama_runtime.py usr/lib/sentia/runtime/
+# Only the server binary is shipped from tools/; see debian/rules for why the
+# rest are built and discarded. The shared libraries and the dynamically loaded
+# CPU backend variants must be shipped too, or the server cannot start.
+usr/bin/llama-server
+usr/lib/*/libllama.so*
+usr/lib/*/libggml*.so*
+usr/lib/*/sentia-llama-cpp/backends/*
+etc/sentia/llama/sentia-local.env
+lib/systemd/system/sentia-local-llama.service
+lib/systemd/system/sentia-local-llama-readiness.service
+usr/lib/sentia/runtime/probe_llama_runtime.py

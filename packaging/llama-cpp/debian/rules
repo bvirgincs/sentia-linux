@@ -34,7 +34,7 @@ override_dh_auto_configure:
 	 -DGGML_ET=OFF \
 	 -DLLAMA_BUILD_TESTS=OFF \
 	 -DLLAMA_BUILD_EXAMPLES=OFF \
-	 -DLLAMA_BUILD_TOOLS=OFF \
+	 -DLLAMA_BUILD_TOOLS=ON \
 	 -DLLAMA_BUILD_APP=OFF \
 	 -DLLAMA_BUILD_SERVER=ON \
 	 -DLLAMA_BUILD_UI=OFF \
@@ -48,8 +48,15 @@ override_dh_auto_configure:
 override_dh_auto_build:
 	dh_auto_build -- -j2
 
+# Upstream only adds tools/ when LLAMA_BUILD_TOOLS is on, and llama-server lives
+# under tools/server, so LLAMA_BUILD_TOOLS=OFF silently produced a package with
+# no server binary at all. There is no per-tool switch, so the other tools are
+# built and then dropped here; only llama-server is shipped.
 override_dh_auto_install:
 	dh_auto_install
+	find debian/tmp/usr/bin -maxdepth 1 -type f \
+	  ! -name 'llama-server' -delete
+	test -x debian/tmp/usr/bin/llama-server
 	install -D -m 0644 config/llama/sentia-local.env debian/tmp/etc/sentia/llama/sentia-local.env
 	install -D -m 0644 config/systemd/sentia-local-llama.service debian/tmp/lib/systemd/system/sentia-local-llama.service
 	install -D -m 0644 config/systemd/sentia-local-llama-readiness.service debian/tmp/lib/systemd/system/sentia-local-llama-readiness.service
