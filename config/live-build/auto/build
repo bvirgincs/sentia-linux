@@ -10,7 +10,6 @@ build_archive_path="/srv/sentia-build-archive"
 
 overlay_source="$(pwd)/sentia-overlay-archive"
 overlay_keyring="$(pwd)/sentia-archive-keyring.gpg"
-overlay_target="chroot${build_archive_path}"
 
 # `lb build` is expanded into its phases so the signed Sentia overlay can be
 # placed inside the live-build chroot. That chroot does not inherit the outer
@@ -27,9 +26,21 @@ lb bootstrap noauto
   exit 1
 }
 
-mkdir -p "${overlay_target}" chroot/usr/share/keyrings
-cp -a "${overlay_source}/." "${overlay_target}/"
-install -m 0644 "${overlay_keyring}" chroot/usr/share/keyrings/sentia-archive-keyring.gpg
+stage_overlay_into() {
+  local root="$1"
+  [[ -d "${root}" ]] || return 0
+  mkdir -p "${root}${build_archive_path}" "${root}/usr/share/keyrings"
+  cp -a "${overlay_source}/." "${root}${build_archive_path}/"
+  install -m 0644 "${overlay_keyring}" "${root}/usr/share/keyrings/sentia-archive-keyring.gpg"
+}
+
+stage_overlay_into chroot
+
+# lb binary_chroot replaces chroot/ with a pristine copy of cache/bootstrap and
+# nests the real rootfs at chroot/chroot. It then reinstalls the chroot-mode apt
+# sources and runs apt in that pristine copy, so the overlay has to be present
+# there as well or the binary stage fails on a missing Release file.
+stage_overlay_into cache/bootstrap
 
 lb chroot noauto
 
@@ -41,5 +52,3 @@ lb chroot noauto
 # sentia-offline-repository.
 lb installer noauto
 lb binary noauto
-
-rm -rf "${overlay_target}"
