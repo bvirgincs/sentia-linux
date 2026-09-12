@@ -30,10 +30,14 @@ require_file "${repo_keyring}"
 readonly SENTIA_BUILD_ARCHIVE_PATH="/srv/sentia-build-archive"
 
 work_livebuild_dir="${WORK_DIR}/live-build"
+# Previous live-build runs leave root-owned files under chroot/, so removal
+# needs root. Hand the fresh directory back to the invoking user, which then
+# stages the config and the overlay archive without sudo.
 run_heavy "reset live-build work directory" sudo bash -lc "
 set -euo pipefail
 rm -rf '${work_livebuild_dir}'
 mkdir -p '${work_livebuild_dir}'
+chown '$(id -u):$(id -g)' '${work_livebuild_dir}'
 "
 
 rsync -a --delete "${REPO_ROOT}/config/live-build/" "${work_livebuild_dir}/"
