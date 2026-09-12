@@ -50,6 +50,17 @@ Required Debian build packages:
 The request/response schema and privilege-broker plan/execute contract live under:
 
 - `native/sentia-apt/protocol/request.schema.json`
+- `native/sentia-apt/protocol/request-legacy.schema.json`
 - `native/sentia-apt/protocol/response.schema.json`
+- `native/sentia-apt/protocol/response-legacy.schema.json`
 - `native/sentia-apt/protocol/broker-contract.json`
 - `native/sentia-apt/protocol/commands.json`
+
+Shared v1 contract dependency:
+
+- `work/contracts` crate `crates/sentia-protocol`
+- schema IDs rooted at `https://sentia.local/schemas/...`
+
+`request.schema.json` and `response.schema.json` are interop wrappers that
+reference shared `tool-invocation-v1` request/result definitions and keep
+legacy envelopes for broker compatibility during transition.

@@ -62,6 +62,16 @@ constexpr char kPackageNameRegex[] = "^[a-z0-9][a-z0-9+.-]{0,127}$";
 constexpr char kDefaultCommandIndexPath[] =
     "/usr/share/sentia/command-index/command-index.json";
 constexpr char kCommandIndexEnvOverride[] = "SENTIA_COMMAND_INDEX_PATH";
+constexpr char kSharedToolRequestSchemaId[] =
+    "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request";
+constexpr char kSharedToolResultSchemaId[] =
+    "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result";
+constexpr char kSharedTransactionApprovalSchemaId[] =
+    "https://sentia.local/schemas/router/transaction-approval-v1.schema.json";
+constexpr char kSharedRouterContractSchemaId[] =
+    "https://sentia.local/schemas/router/router-contract-v1.schema.json";
+constexpr char kSharedRouterConfigSchemaId[] =
+    "https://sentia.local/schemas/configuration/router-config-v1.schema.json";
 
 const std::regex kPackageNamePattern(kPackageNameRegex);
 const std::regex kSha256Pattern("^[a-f0-9]{64}$");
@@ -519,6 +529,49 @@ RequestEnvelope ParseRequest(const json& request) {
   }
 
   RequestEnvelope envelope;
+
+  const bool has_tool_name = request.contains("name");
+  const bool has_tool_args = request.contains("args");
+  if (has_tool_name) {
+    if (!has_tool_args) {
+      throw WorkerError(
+          "schema_validation_failed",
+          "ToolRequest compatibility requires both name and args fields");
+    }
+    envelope.request_id =
+        RequireStringField(request, "request_id", kMaxRequestIdLength);
+    const std::string version = RequireStringField(request, "version", 24);
+    if (version != "sentia.v1") {
+      throw WorkerError("unsupported_protocol_version",
+                        "tool request version is not supported",
+                        {{"expected", "sentia.v1"}, {"provided", version}});
+    }
+    envelope.protocol_version = kProtocolVersion;
+    envelope.operation =
+        NormalizeOperation(RequireStringField(request, "name", 64));
+    if (!request.at("args").is_object()) {
+      throw WorkerError("schema_validation_failed", "ToolRequest args must be an object",
+                        {{"field", "args"}});
+    }
+    envelope.arguments = request.at("args");
+    if (request.contains("approval")) {
+      if (!request.at("approval").is_object()) {
+        throw WorkerError("schema_validation_failed",
+                          "ToolRequest approval must be an object",
+                          {{"field", "approval"}});
+      }
+      envelope.approval = request.at("approval");
+    } else if (envelope.arguments.contains("approval")) {
+      if (!envelope.arguments.at("approval").is_object()) {
+        throw WorkerError("schema_validation_failed",
+                          "ToolRequest args.approval must be an object",
+                          {{"field", "args.approval"}});
+      }
+      envelope.approval = envelope.arguments.at("approval");
+    }
+    return envelope;
+  }
+
   envelope.request_id = RequireStringField(request, "request_id", kMaxRequestIdLength);
 
   if (request.contains("protocol_version")) {
@@ -1547,6 +1600,14 @@ json HandleDiagnostics() {
         {"requires_root", true},
         {"transaction_executor", "libapt-pkg pkgPackageManager"},
         {"no_shell_execution", true}}},
+      {"shared_contract",
+       {{"crate", "crates/sentia-protocol"},
+        {"schema_ids",
+         {{"tool_request", kSharedToolRequestSchemaId},
+          {"tool_result", kSharedToolResultSchemaId},
+          {"transaction_approval", kSharedTransactionApprovalSchemaId},
+          {"router_contract", kSharedRouterContractSchemaId},
+          {"router_config", kSharedRouterConfigSchemaId}}}}},
       {"command_index", command_index},
   };
 }

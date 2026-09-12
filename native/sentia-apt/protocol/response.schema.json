@@ -1,123 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://sentia.dev/schemas/apt-worker/response.schema.json",
-  "title": "Sentia APT Worker Response",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "request_id",
-    "protocol_version",
-    "operation",
-    "timestamp",
-    "status"
+  "$id": "https://sentia.local/schemas/tools/sentia-apt-worker-response-v1.schema.json",
+  "title": "Sentia APT Worker Response (Interop Wrapper)",
+  "description": "Primary shape is shared ToolResult sentia.v1; legacy broker envelope remains accepted for compatibility.",
+  "oneOf": [
+    {
+      "$ref": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result"
+    },
+    {
+      "$ref": "response-legacy.schema.json"
+    }
   ],
-  "properties": {
-    "request_id": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "protocol_version": {
-      "type": "string",
-      "const": "1.0"
-    },
-    "operation": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "timestamp": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "status": {
-      "type": "string",
-      "enum": [
-        "ok",
-        "error"
-      ]
-    },
-    "result": {
-      "type": [
-        "object",
-        "array",
-        "string",
-        "number",
-        "integer",
-        "boolean",
-        "null"
-      ]
-    },
-    "error": {
-      "type": "object",
-      "required": [
-        "code",
-        "message"
-      ],
-      "additionalProperties": true,
-      "properties": {
-        "code": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "details": {
-          "type": [
-            "object",
-            "array",
-            "string",
-            "number",
-            "integer",
-            "boolean",
-            "null"
-          ]
-        }
-      }
-    },
-    "diagnostics": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "apt_messages": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    }
-  },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "status": {
-            "const": "ok"
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "result"
-        ]
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "status": {
-            "const": "error"
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "error"
-        ]
-      }
-    }
-  ]
+  "x-shared-contract": {
+    "authoritative_crate": "crates/sentia-protocol",
+    "authoritative_schema_id": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result",
+    "legacy_schema": "response-legacy.schema.json"
+  }
 }

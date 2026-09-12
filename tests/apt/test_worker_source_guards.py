@@ -42,6 +42,12 @@ class WorkerSourceGuardTests(unittest.TestCase):
         self.assertIn("sentia-apt-worker", source)
         self.assertIn("/sentia-apt", source)
 
+    def test_supports_shared_tool_request_fields(self) -> None:
+        source = WORKER_CPP.read_text(encoding="utf-8")
+        self.assertIn('request.contains("name")', source)
+        self.assertIn('request.contains("args")', source)
+        self.assertIn('"sentia.v1"', source)
+
 
 if __name__ == "__main__":
     unittest.main()

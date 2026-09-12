@@ -58,7 +58,9 @@ install(CODE [[
 install(
   FILES
     protocol/request.schema.json
+    protocol/request-legacy.schema.json
     protocol/response.schema.json
+    protocol/response-legacy.schema.json
     protocol/broker-contract.json
     protocol/commands.json
   DESTINATION share/sentia-apt-worker/protocol

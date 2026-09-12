@@ -2,6 +2,15 @@
   "contract_name": "sentia-apt plan/execute broker contract",
   "method_version": 1,
   "protocol_version": "1.0",
+  "authoritative_shared_contract": {
+    "worktree": "work/contracts",
+    "crate": "crates/sentia-protocol",
+    "milestones": [
+      "d0c9a2eaf88e05ffc158cf8ad1d742b1d2706051",
+      "6d03c31b8370f513f168bda7e113ee7fc89b6927",
+      "3c46d4054e6c9db5a1515c28994e1b65cd6cb297"
+    ]
+  },
   "binary_path": "/usr/libexec/sentia/sentia-apt-worker",
   "binary_compatibility_paths": [
     "/usr/libexec/sentia/sentia-apt"
@@ -24,6 +33,14 @@
   },
   "request_schema": "request.schema.json",
   "response_schema": "response.schema.json",
+  "shared_schema_ids": {
+    "tool_request": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request",
+    "tool_result": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result",
+    "transaction_approval": "https://sentia.local/schemas/router/transaction-approval-v1.schema.json",
+    "router_contract": "https://sentia.local/schemas/router/router-contract-v1.schema.json",
+    "router_config": "https://sentia.local/schemas/configuration/router-config-v1.schema.json",
+    "provider_contract": "https://sentia.local/schemas/router/provider-contract-v1.schema.json"
+  },
   "digest_scope": {
     "includes_only": [
       "result.canonical_plan"

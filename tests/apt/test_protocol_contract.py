@@ -9,7 +9,15 @@ PROTOCOL_DIR = ROOT / "native" / "sentia-apt" / "protocol"
 
 class ProtocolContractTests(unittest.TestCase):
     def test_request_schema_lists_required_operations(self) -> None:
-        schema = json.loads((PROTOCOL_DIR / "request.schema.json").read_text())
+        wrapper = json.loads((PROTOCOL_DIR / "request.schema.json").read_text())
+        refs = {item["$ref"] for item in wrapper["oneOf"]}
+        self.assertIn(
+            "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request",
+            refs,
+        )
+        self.assertIn("request-legacy.schema.json", refs)
+
+        schema = json.loads((PROTOCOL_DIR / "request-legacy.schema.json").read_text())
         operations = set(schema["properties"]["operation"]["enum"])
         expected = {
             "apt_search",
@@ -31,6 +39,15 @@ class ProtocolContractTests(unittest.TestCase):
         self.assertIn("planid", approval_props)
         self.assertIn("expires_utc", approval_props)
 
+    def test_response_schema_wraps_shared_tool_result(self) -> None:
+        wrapper = json.loads((PROTOCOL_DIR / "response.schema.json").read_text())
+        refs = {item["$ref"] for item in wrapper["oneOf"]}
+        self.assertIn(
+            "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result",
+            refs,
+        )
+        self.assertIn("response-legacy.schema.json", refs)
+
     def test_broker_contract_execute_requires_approval_fields(self) -> None:
         contract = json.loads((PROTOCOL_DIR / "broker-contract.json").read_text())
         self.assertEqual(contract["method_version"], 1)
@@ -50,6 +67,18 @@ class ProtocolContractTests(unittest.TestCase):
             contract["digest_scope"]["includes_only"], ["result.canonical_plan"]
         )
         self.assertIn("result.diagnostics", contract["digest_scope"]["excludes"])
+        self.assertEqual(
+            contract["authoritative_shared_contract"]["crate"],
+            "crates/sentia-protocol",
+        )
+        self.assertIn(
+            "d0c9a2eaf88e05ffc158cf8ad1d742b1d2706051",
+            contract["authoritative_shared_contract"]["milestones"],
+        )
+        self.assertEqual(
+            contract["shared_schema_ids"]["tool_request"],
+            "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request",
+        )
         required = set(contract["required_approval_fields"])
         self.assertEqual(
             required,
