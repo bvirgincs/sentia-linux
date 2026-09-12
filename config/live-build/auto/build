@@ -35,7 +35,13 @@ lb chroot noauto
 
 # The build-time archive must not reach the shipped filesystem. Installed
 # systems get their local archive from sentia-offline-repository.
+#
+# The sources entry has to go with it: `lb binary` runs apt inside the chroot
+# again, and a file: source pointing at a removed directory fails the build
+# with "does not have a Release file".
 rm -rf "${overlay_target}"
+rm -f chroot/etc/apt/sources.list.d/sentia-overlay.list \
+      chroot/etc/apt/sources.list.d/sentia-overlay.sources
 
 lb installer noauto
 lb binary noauto
