@@ -1,0 +1,323 @@
+{
+  "contract_name": "sentia-apt plan/execute broker contract",
+  "method_version": 1,
+  "protocol_version": "1.0",
+  "authoritative_shared_contract": {
+    "worktree": "work/contracts",
+    "crate": "crates/sentia-protocol",
+    "milestones": [
+      "d0c9a2eaf88e05ffc158cf8ad1d742b1d2706051",
+      "6d03c31b8370f513f168bda7e113ee7fc89b6927",
+      "3c46d4054e6c9db5a1515c28994e1b65cd6cb297"
+    ]
+  },
+  "binary_path": "/usr/libexec/sentia/sentia-apt-worker",
+  "binary_compatibility_paths": [
+    "/usr/libexec/sentia/sentia-apt"
+  ],
+  "invocation": {
+    "transport": "stdin/stdout",
+    "framing": "single JSON request object in stdin; single JSON response object in stdout",
+    "encoding": "UTF-8"
+  },
+  "runtime_limits": {
+    "max_request_bytes": 1048576,
+    "max_response_bytes": 1048576,
+    "max_plan_retained_bytes": 262144,
+    "plan_timeout_seconds": 30,
+    "execute_timeout_seconds": 900
+  },
+  "execution_environment": {
+    "broker_sets_explicit_environment": true,
+    "ignore_user_environment": true
+  },
+  "request_schema": "request.schema.json",
+  "response_schema": "response.schema.json",
+  "shared_schema_ids": {
+    "tool_request": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request",
+    "tool_result": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result",
+    "transaction_approval": "https://sentia.local/schemas/router/transaction-approval-v1.schema.json",
+    "router_contract": "https://sentia.local/schemas/router/router-contract-v1.schema.json",
+    "router_config": "https://sentia.local/schemas/configuration/router-config-v1.schema.json",
+    "provider_contract": "https://sentia.local/schemas/router/provider-contract-v1.schema.json"
+  },
+  "digest_scope": {
+    "includes_only": [
+      "result.canonical_plan"
+    ],
+    "excludes": [
+      "result.diagnostics",
+      "timestamp",
+      "lock-mode transport/runtime details"
+    ]
+  },
+  "security_model": {
+    "execute_requires_root": true,
+    "execute_requires_polkit_authorization": true,
+    "execute_requires_single_use_plan_digest": true,
+    "worker_revalidates_under_locks": true,
+    "worker_rejects_client_plan_trust": true,
+    "rejects_arbitrary_shell": true
+  },
+  "required_approval_fields": [
+    "plan_digest",
+    "broker_session_id",
+    "authorization_id",
+    "expires_at",
+    "allow_source_change",
+    "allow_essential_removal",
+    "allow_held_change"
+  ],
+  "request_aliases": {
+    "arguments": [
+      "arguments",
+      "args"
+    ],
+    "protocol_version": [
+      "protocol_version",
+      "version"
+    ]
+  },
+  "approval_aliases": {
+    "plan_digest": [
+      "plan_digest",
+      "digest"
+    ],
+    "broker_session_id": [
+      "broker_session_id",
+      "session_hash",
+      "sessionhash",
+      "broker_session_hash"
+    ],
+    "authorization_id": [
+      "authorization_id",
+      "plan_id",
+      "planid"
+    ],
+    "expires_at": [
+      "expires_at",
+      "expires_utc",
+      "expiry_utc",
+      "utc_expiry"
+    ]
+  },
+  "plan_then_execute_flow": [
+    "1) broker sends mode=plan request",
+    "2) worker returns canonical_plan + plan_digest",
+    "3) broker shows exact canonical_plan and digest in trusted GUI preview",
+    "4) GUI/polkit authorization occurs outside model dispatch",
+    "5) broker sends mode=execute with approval payload",
+    "6) worker locks apt state, re-resolves, recomputes digest, rejects if changed"
+  ],
+  "external_operation_adapter": {
+    "description": "Broker may accept provisional external operations and map to worker requests.",
+    "external_shape": {
+      "operation": "apt_install|apt_remove|apt_update|apt_upgrade",
+      "packages": [
+        "optional package names for install/remove"
+      ]
+    },
+    "mapping_rules": [
+      "external.operation maps to request.operation",
+      "for preview path broker emits arguments.mode=plan",
+      "for execution path broker emits arguments.mode=execute plus approval object",
+      "external.packages maps to arguments.packages for install/remove",
+      "update/upgrade requests omit arguments.packages"
+    ]
+  },
+  "operation_matrix": {
+    "apt_search": {
+      "mode": "read_only",
+      "arguments": {
+        "query": "string (1..256)",
+        "limit": "int (1..200, default 25)"
+      }
+    },
+    "apt_package_info": {
+      "mode": "read_only",
+      "arguments": {
+        "packages": "array[string package-name regex ^[a-z0-9][a-z0-9+.-]{0,127}$] (1..64)",
+        "version_limit": "int (1..50, default 10)"
+      }
+    },
+    "apt_package_policy": {
+      "mode": "read_only",
+      "arguments": {
+        "packages": "array[string package-name regex ^[a-z0-9][a-z0-9+.-]{0,127}$] (1..64)",
+        "version_limit": "int (1..50, default 10)"
+      }
+    },
+    "apt_simulate_install": {
+      "mode": "plan_only",
+      "arguments": {
+        "packages": "array[string package-name] (1..64)"
+      }
+    },
+    "apt_install": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute",
+        "packages": "array[string package-name] (1..64)"
+      }
+    },
+    "apt_remove": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute",
+        "packages": "array[string package-name] (1..64)"
+      }
+    },
+    "apt_update": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute"
+      }
+    },
+    "apt_upgrade": {
+      "mode": "plan_or_execute",
+      "arguments": {
+        "mode": "plan|execute"
+      }
+    },
+    "package_owns_file": {
+      "mode": "read_only",
+      "arguments": {
+        "file_path": "string (1..4096)",
+        "index_path": "optional string (1..4096)"
+      }
+    }
+  },
+  "command_not_found_lookup_contract": {
+    "operation": "package_owns_file",
+    "description": "Authoritative offline command->package lookup for deterministic command-not-found UX. Read-only; never executes package actions.",
+    "request": {
+      "request_id": "string <= 128",
+      "protocol_version": "1.0",
+      "operation": "package_owns_file",
+      "arguments": {
+        "file_path": "required string; accepts missing command token (e.g. 'rg') or full path (e.g. '/usr/bin/rg')",
+        "index_path": "optional explicit command index path; defaults to /usr/share/sentia/command-index/command-index.json"
+      }
+    },
+    "response_result_fields": [
+      "file_path",
+      "command",
+      "found",
+      "packages",
+      "paths",
+      "index_path",
+      "index_generated_at",
+      "provenance"
+    ],
+    "provenance_freshness_fields": [
+      "result.index_generated_at",
+      "result.provenance.suite",
+      "result.provenance.snapshot",
+      "result.provenance.source_uri",
+      "result.provenance.contents_files[].sha256"
+    ],
+    "error_codes": [
+      "command_index_missing",
+      "command_index_too_large",
+      "command_index_unreadable",
+      "command_index_invalid_json",
+      "command_index_invalid_schema",
+      "schema_validation_failed",
+      "request_too_large",
+      "invalid_json",
+      "unsupported_protocol_version"
+    ],
+    "interactive_timeout_guidance": {
+      "lookup_timeout_ms": 2000,
+      "fallback_behavior": "On timeout or error, emit no package suggestion and continue deterministic shell flow without automatic execution."
+    }
+  },
+  "plan_response_minimum": {
+    "status": "ok",
+    "result_fields": [
+      "mode=plan",
+      "canonical_plan",
+      "plan_digest",
+      "diagnostics.resolver_lock_mode"
+    ]
+  },
+  "execute_response_minimum": {
+    "status": "ok",
+    "result_fields": [
+      "mode=execute",
+      "canonical_plan",
+      "plan_digest",
+      "execution"
+    ]
+  },
+  "error_codes_requiring_reapproval": [
+    "plan_digest_mismatch",
+    "source_change_requires_approval",
+    "essential_removal_rejected",
+    "held_package_change_rejected"
+  ],
+  "examples": {
+    "install_plan_request": {
+      "request_id": "req-install-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_install",
+      "arguments": {
+        "mode": "plan",
+        "packages": [
+          "ripgrep",
+          "fd-find"
+        ]
+      }
+    },
+    "install_execute_request": {
+      "request_id": "req-install-exec-001",
+      "protocol_version": "1.0",
+      "operation": "apt_install",
+      "arguments": {
+        "mode": "execute",
+        "packages": [
+          "ripgrep",
+          "fd-find"
+        ]
+      },
+      "approval": {
+        "plan_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "broker_session_id": "broker-session-1234",
+        "authorization_id": "polkit-auth-5678",
+        "expires_at": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "install_execute_request_compat_aliases": {
+      "request_id": "req-install-exec-compat-001",
+      "version": 1,
+      "operation": "apt_install",
+      "args": {
+        "mode": "execute",
+        "packages": [
+          "ripgrep",
+          "fd-find"
+        ]
+      },
+      "approval": {
+        "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sessionhash": "broker-session-hash-1234",
+        "planid": "polkit-plan-nonce-5678",
+        "expires_utc": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "update_plan_request": {
+      "request_id": "req-update-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_update",
+      "arguments": {
+        "mode": "plan"
+      }
+    }
+  }
+}

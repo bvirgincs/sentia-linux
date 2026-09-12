@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/tools/sentia-apt-worker-response-v1.schema.json",
+  "title": "Sentia APT Worker Response (Interop Wrapper)",
+  "description": "Primary shape is shared ToolResult sentia.v1; legacy broker envelope remains accepted for compatibility.",
+  "oneOf": [
+    {
+      "$ref": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result"
+    },
+    {
+      "$ref": "response-legacy.schema.json"
+    }
+  ],
+  "x-shared-contract": {
+    "authoritative_crate": "crates/sentia-protocol",
+    "authoritative_schema_id": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result",
+    "legacy_schema": "response-legacy.schema.json"
+  }
+}

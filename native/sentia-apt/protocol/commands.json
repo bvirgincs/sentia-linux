@@ -1,0 +1,171 @@
+{
+  "method_version": 1,
+  "protocol_version": "1.0",
+  "binary_path": "/usr/libexec/sentia/sentia-apt-worker",
+  "shared_schema_ids": {
+    "tool_request": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request",
+    "tool_result": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result"
+  },
+  "commands": {
+    "apt_install_plan_tool_request": {
+      "version": "sentia.v1",
+      "request_id": "req-install-plan-tool-001",
+      "name": "apt_install",
+      "args": {
+        "mode": "plan",
+        "packages": [
+          "docker.io"
+        ]
+      },
+      "max_input_bytes": 65536,
+      "provenance": {
+        "source": "router",
+        "timestamp_ms": 1789230000000,
+        "request_id": "req-install-plan-tool-001"
+      }
+    },
+    "apt_search": {
+      "request_id": "req-search-001",
+      "protocol_version": "1.0",
+      "operation": "apt_search",
+      "arguments": {
+        "query": "docker",
+        "limit": 25
+      }
+    },
+    "apt_package_info": {
+      "request_id": "req-info-001",
+      "protocol_version": "1.0",
+      "operation": "apt_package_info",
+      "arguments": {
+        "packages": [
+          "docker.io"
+        ],
+        "version_limit": 10
+      }
+    },
+    "apt_package_policy": {
+      "request_id": "req-policy-001",
+      "protocol_version": "1.0",
+      "operation": "apt_package_policy",
+      "arguments": {
+        "packages": [
+          "docker.io"
+        ],
+        "version_limit": 10
+      }
+    },
+    "apt_simulate_install": {
+      "request_id": "req-sim-001",
+      "protocol_version": "1.0",
+      "operation": "apt_simulate_install",
+      "arguments": {
+        "packages": [
+          "docker.io"
+        ]
+      }
+    },
+    "apt_install_plan": {
+      "request_id": "req-install-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_install",
+      "arguments": {
+        "mode": "plan",
+        "packages": [
+          "docker.io"
+        ]
+      }
+    },
+    "apt_install_execute": {
+      "request_id": "req-install-execute-001",
+      "protocol_version": "1.0",
+      "operation": "apt_install",
+      "arguments": {
+        "mode": "execute",
+        "packages": [
+          "docker.io"
+        ]
+      },
+      "approval": {
+        "plan_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "broker_session_id": "broker-session-1234",
+        "authorization_id": "polkit-auth-5678",
+        "expires_at": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "apt_install_execute_compat_aliases": {
+      "request_id": "req-install-execute-compat-001",
+      "version": 1,
+      "operation": "apt_install",
+      "args": {
+        "mode": "execute",
+        "packages": [
+          "docker.io"
+        ]
+      },
+      "approval": {
+        "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sessionhash": "broker-session-hash-1234",
+        "planid": "polkit-plan-nonce-5678",
+        "expires_utc": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "apt_remove_plan": {
+      "request_id": "req-remove-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_remove",
+      "arguments": {
+        "mode": "plan",
+        "packages": [
+          "docker.io"
+        ]
+      }
+    },
+    "apt_upgrade_plan": {
+      "request_id": "req-upgrade-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_upgrade",
+      "arguments": {
+        "mode": "plan"
+      }
+    },
+    "apt_update_plan": {
+      "request_id": "req-update-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_update",
+      "arguments": {
+        "mode": "plan"
+      }
+    },
+    "package_owns_file": {
+      "request_id": "req-owns-file-001",
+      "protocol_version": "1.0",
+      "operation": "package_owns_file",
+      "arguments": {
+        "file_path": "/usr/bin/docker"
+      }
+    },
+    "package_owns_file_command_not_found": {
+      "request_id": "req-cnf-lookup-001",
+      "protocol_version": "1.0",
+      "operation": "package_owns_file",
+      "arguments": {
+        "file_path": "docker",
+        "index_path": "/usr/share/sentia/command-index/command-index.json"
+      },
+      "timeout_ms": 2000
+    },
+    "diagnostics": {
+      "request_id": "req-diag-001",
+      "protocol_version": "1.0",
+      "operation": "diagnostics",
+      "arguments": {}
+    }
+  }
+}
