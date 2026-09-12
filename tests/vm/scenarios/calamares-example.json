@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "calamares-qmp-template-not-qualified",
+  "steps": [
+    {
+      "action": "wait",
+      "seconds": 30
+    },
+    {
+      "action": "screenshot",
+      "name": "live-desktop.ppm"
+    }
+  ]
+}
+
