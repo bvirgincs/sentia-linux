@@ -22,3 +22,9 @@ Security posture:
 - timeouts and output limits
 - explicit permission-denied/unavailable errors
 - command history is explicit-input only (never reads shell history files)
+
+Router JSON framing (`sentia.tools.readonly.v1`):
+- `list`: returns read-only tool descriptors and JSON input schemas
+- `invoke`: dispatches by tool name with validated typed JSON input
+- `cancel`: explicit form, currently returns `accepted=false` (sync calls only)
+- `error`: structured `ToolErrorEnvelope { category, retryable, error }`

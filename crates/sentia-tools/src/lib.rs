@@ -1,4 +1,5 @@
 mod error;
+pub mod protocol;
 mod result;
 mod runner;
 mod tools;
