@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+lb config noauto \
+  --mode debian \
+  --architectures amd64 \
+  --distribution trixie \
+  --archive-areas "main non-free-firmware" \
+  --binary-images iso-hybrid \
+  --debian-installer none \
+  --mirror-bootstrap https://deb.debian.org/debian \
+  --mirror-chroot https://deb.debian.org/debian \
+  --mirror-chroot-security https://deb.debian.org/debian-security \
+  --mirror-binary https://deb.debian.org/debian \
+  --mirror-binary-security https://deb.debian.org/debian-security \
+  --security true \
+  --updates true \
+  --checksums sha256
