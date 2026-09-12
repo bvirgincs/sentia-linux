@@ -1,0 +1,357 @@
+{
+  "schema_version": "sentia.acceptance.v1",
+  "manifest_id": "sentia-release-gates-v1",
+  "release_blocking": true,
+  "evidence_semantics": {
+    "required_flag_meaning": "required=true means missing evidence or failed assertion blocks release promotion.",
+    "evidence_required_fields": [
+      "status",
+      "environment",
+      "guest_configuration",
+      "artifact_hashes",
+      "log_references"
+    ],
+    "allowed_evidence_status": [
+      "missing",
+      "collected",
+      "verified",
+      "failed",
+      "redacted"
+    ]
+  },
+  "domains": [
+    {
+      "domain": "BUILD",
+      "required": true,
+      "cases": [
+        {
+          "id": "BUILD-CLEAN-DOCUMENTED",
+          "required": true,
+          "assertion": "Build is reproducible from documented inputs and emits checksums, package manifests, and license/source closure evidence.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "build-log",
+              "iso-sha256",
+              "package-manifest",
+              "source-manifest"
+            ],
+            "required_record_fields": [
+              "build_id",
+              "builder_image",
+              "input_revision",
+              "output_checksums"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "LIVE",
+      "required": true,
+      "cases": [
+        {
+          "id": "LIVE-BOOT-DESKTOP-ROUTER",
+          "required": true,
+          "assertion": "UEFI live boot reaches desktop login, Xfce session, terminal, router, local inference response, health status, and installer launch.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "serial-log",
+              "qmp-events",
+              "desktop-screenshots",
+              "router-health-output"
+            ],
+            "required_record_fields": [
+              "firmware",
+              "kernel_version",
+              "systemd_target",
+              "network_state"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "INSTALL",
+      "required": true,
+      "cases": [
+        {
+          "id": "INSTALL-CALAMARES-REAL-GPT",
+          "required": true,
+          "assertion": "Calamares performs actual automated and manual GPT installs with valid user/locale/keyboard/bootloader outcomes and no live residue.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "calamares-log",
+              "install-serial-log",
+              "partition-table-dump"
+            ],
+            "required_record_fields": [
+              "install_mode",
+              "target_disk_layout",
+              "hostname",
+              "username"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "DISK",
+      "required": true,
+      "cases": [
+        {
+          "id": "DISK-BOOT-WITHOUT-ISO",
+          "required": true,
+          "assertion": "Installed disk boots without attached ISO and validates desktop, network, apt policy, local AI, package simulation, and reboot/shutdown flow.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "postinstall-serial-log",
+              "desktop-screenshot",
+              "apt-policy-capture"
+            ],
+            "required_record_fields": [
+              "boot_source",
+              "user_login_result",
+              "sentia_archive_status",
+              "reboot_result"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "OFFLINE",
+      "required": true,
+      "cases": [
+        {
+          "id": "OFFLINE-LOCAL-AI-NO-DOWNLOAD",
+          "required": true,
+          "assertion": "With NIC disconnected, local AI still answers and no hidden model/provider download or dependency appears.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "offline-router-log",
+              "offline-network-capture",
+              "model-access-log"
+            ],
+            "required_record_fields": [
+              "nic_state",
+              "offline_prompt",
+              "offline_response_digest",
+              "remote_attempt_count"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "AI",
+      "required": true,
+      "cases": [
+        {
+          "id": "AI-MODEL-IDENTITY-LIFECYCLE",
+          "required": true,
+          "assertion": "Model revision/digest/license and baseline+optimized CPU runtime behavior are verified with bounded queue/memory and cancellation behavior.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "model-provenance-record",
+              "latency-metrics",
+              "memory-profile",
+              "cancel-trace"
+            ],
+            "required_record_fields": [
+              "model_digest",
+              "cpu_profile",
+              "context_size",
+              "queue_bounds"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "TOOLS",
+      "required": true,
+      "cases": [
+        {
+          "id": "TOOLS-REGISTRY-SCHEMA-COVERAGE",
+          "required": true,
+          "assertion": "All required tools exist with schemas, provenance, privilege class, privacy class, and explicit unavailable/permission-denied result paths.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "tool-registry-json",
+              "schema-validation-report",
+              "permission-denied-fixtures"
+            ],
+            "required_record_fields": [
+              "tool_count",
+              "missing_tools",
+              "unsafe_transport_paths"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "SHELL",
+      "required": true,
+      "cases": [
+        {
+          "id": "SHELL-BASH-PRESERVATION",
+          "required": true,
+          "assertion": "Bash hooks preserve exit status/pipelines/prompts/job control; typo/missing-package/natural-language classifications are correct with no auto execution.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "shell-regression-log",
+              "classification-cases",
+              "prompt-behavior-record"
+            ],
+            "required_record_fields": [
+              "hook_mode",
+              "pipeline_status_check",
+              "auto_execution_count"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "HEALTH",
+      "required": true,
+      "cases": [
+        {
+          "id": "HEALTH-METRICS-HYSTERESIS",
+          "required": true,
+          "assertion": "Health metrics are emitted for UI/tools with bounded sampling and hysteresis behavior; missing sensors are handled without false pass.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "health-metrics-log",
+              "sensor-fixtures",
+              "alert-transition-report"
+            ],
+            "required_record_fields": [
+              "sampling_interval_ms",
+              "missing_sensor_policy",
+              "alert_thresholds"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "ROUTER",
+      "required": true,
+      "cases": [
+        {
+          "id": "ROUTER-POLICY-FALLBACK-CANCEL",
+          "required": true,
+          "assertion": "Router enforces LOCAL_ONLY, LOCAL_PREFERRED, REMOTE_PREFERRED, ASK_BEFORE_REMOTE with explicit state transitions, remote failure reasons, clean fallback, and cancellation contracts.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "router-policy-test-log",
+              "streaming-event-log",
+              "cancel-contract-record"
+            ],
+            "required_record_fields": [
+              "policy_matrix",
+              "fallback_reason_codes",
+              "duplicate_mutation_count"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "PRIVACY",
+      "required": true,
+      "cases": [
+        {
+          "id": "PRIVACY-PRE-EGRESS-GATE",
+          "required": true,
+          "assertion": "Outbound payloads pass classification/minimization/redaction and consent checks; protected sockets and provider isolation are enforced.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "redaction-report",
+              "consent-preview-log",
+              "socket-permission-check"
+            ],
+            "required_record_fields": [
+              "blocked_categories",
+              "consent_scope_hash",
+              "provider_destination_allowlist"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "TRUST",
+      "required": true,
+      "cases": [
+        {
+          "id": "TRUST-SIGNATURE-ALLOWLIST",
+          "required": true,
+          "assertion": "Signature verification, key expiry handling, metadata integrity, and package allowlist enforcement reject tampered or unsigned content.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "signature-verification-log",
+              "tamper-fixture-results",
+              "allowlist-enforcement-report"
+            ],
+            "required_record_fields": [
+              "trusted_fingerprints",
+              "rejection_matrix",
+              "unsigned_fallback_used"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "SECUREBOOT",
+      "required": true,
+      "cases": [
+        {
+          "id": "SECUREBOOT-OVMF-OUTCOME",
+          "required": true,
+          "assertion": "Secure Boot enabled/disabled OVMF runs document boot-chain outcomes without claiming unsupported physical-hardware certification.",
+          "evidence": {
+            "minimum_status": "verified",
+            "required_artifacts": [
+              "ovmf-boot-log",
+              "secureboot-state-capture"
+            ],
+            "required_record_fields": [
+              "firmware_mode",
+              "secureboot_enabled",
+              "measured_boot_result"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "failure_injection": [
+    "no-internet-and-bad-dns",
+    "remote-timeout-auth-expired-quota-exhaustion",
+    "unsupported-capability-and-malformed-provider-response",
+    "router-restart-with-inflight-requests",
+    "crashing-local-service",
+    "low-disk-and-journal-error-fixtures",
+    "invalid-command-missing-package-nonexistent-apt-package",
+    "apt-lock-contention-and-plan-drift-after-approval",
+    "interrupted-package-operation-and-dpkg-broken-state",
+    "low-memory-pressure-and-swap-thrash-bounded-host-safe",
+    "prompt-and-tool-injection-via-model-output-logs-filenames-docs-terminal-provider"
+  ]
+}

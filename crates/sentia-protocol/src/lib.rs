@@ -1,0 +1,36 @@
+#![forbid(unsafe_code)]
+
+pub mod bounded;
+pub mod errors;
+pub mod evidence;
+pub mod metrics;
+pub mod provider;
+pub mod router;
+pub mod socket;
+pub mod tools;
+pub mod transactions;
+
+pub use bounded::{BoundedString, BoundedStringError, BoundedVec, BoundedVecError};
+pub use errors::{ContractError, ContractErrorCode};
+pub use evidence::{EvidenceDomain, EvidencePointer, EvidenceRecord, EvidenceStatus};
+pub use metrics::{MetricSample, MetricUnit, RouterMetrics};
+pub use provider::{
+    ProviderCapabilities, ProviderCapability, ProviderError, ProviderErrorCode, ProviderHealth,
+    ProviderState, ProviderStatus,
+};
+pub use router::{
+    DataProvenance, DataSensitivity, RequestPayload, RequestStatus, ResultPayload, RouterCapability,
+    RouterConfig, RouterRequest, RouterResult, RoutingPolicy, PROTOCOL_VERSION_V1,
+};
+pub use socket::{
+    CancelAck, CancelReason, CancelRequest, EventPayload, JsonlFrame, StreamEvent, ToolPhase,
+    UnixSocketSecurity, SOCKET_TRANSPORT_V1,
+};
+pub use tools::{
+    CancellationPolicy, PrivilegeClass, PrivacyClass, ToolArea, ToolDefinition, ToolName,
+    ToolRegistry,
+};
+pub use transactions::{
+    ApprovalBinding, ApprovalGrant, ApprovalPlan, CanonicalTransactionPlan, PackageDelta,
+    RequiredEvidence, ServiceDelta, TransactionKind,
+};

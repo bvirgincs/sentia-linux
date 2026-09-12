@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/configuration/router-config-v1.schema.json",
+  "title": "Sentia Router Config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "socket_path",
+    "default_policy",
+    "allow_remote_providers",
+    "max_in_flight_requests",
+    "max_queue_depth",
+    "max_payload_bytes",
+    "max_stream_event_bytes",
+    "allowed_provider_ids"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "sentia.v1"
+    },
+    "socket_path": {
+      "type": "string",
+      "pattern": "^/run/user/[0-9]+/.+"
+    },
+    "default_policy": {
+      "type": "string",
+      "enum": [
+        "LOCAL_ONLY",
+        "LOCAL_PREFERRED",
+        "REMOTE_PREFERRED",
+        "ASK_BEFORE_REMOTE"
+      ]
+    },
+    "allow_remote_providers": { "type": "boolean" },
+    "max_in_flight_requests": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "max_queue_depth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+    },
+    "max_payload_bytes": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 262144
+    },
+    "max_stream_event_bytes": {
+      "type": "integer",
+      "minimum": 256,
+      "maximum": 262144
+    },
+    "allowed_provider_ids": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 48
+      }
+    }
+  }
+}

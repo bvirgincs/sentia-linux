@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/router/evidence-record-v1.schema.json",
+  "title": "Sentia Evidence Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "domain",
+    "required",
+    "status",
+    "assertion",
+    "pointers"
+  ],
+  "properties": {
+    "evidence_id": { "type": "string", "maxLength": 80 },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "BUILD",
+        "LIVE",
+        "INSTALL",
+        "DISK",
+        "OFFLINE",
+        "AI",
+        "TOOLS",
+        "SHELL",
+        "HEALTH",
+        "ROUTER",
+        "PRIVACY",
+        "TRUST",
+        "SECUREBOOT"
+      ]
+    },
+    "required": { "type": "boolean" },
+    "status": {
+      "type": "string",
+      "enum": ["missing", "collected", "verified", "failed", "redacted"]
+    },
+    "assertion": { "type": "string" },
+    "pointers": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "path"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "iso_checksum",
+              "build_log",
+              "serial_log",
+              "journal_log",
+              "screenshot",
+              "artifact_manifest",
+              "test_report"
+            ]
+          },
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "failure_reason": { "type": "string" }
+  }
+}

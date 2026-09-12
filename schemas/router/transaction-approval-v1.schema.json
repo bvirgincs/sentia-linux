@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/router/transaction-approval-v1.schema.json",
+  "title": "Sentia Canonical Transaction and Approval Plan v1",
+  "oneOf": [
+    { "$ref": "#/$defs/transaction_plan" },
+    { "$ref": "#/$defs/approval_plan" },
+    { "$ref": "#/$defs/approval_grant" }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "transaction_kind": {
+      "type": "string",
+      "enum": [
+        "apt_install",
+        "apt_remove",
+        "apt_update",
+        "apt_upgrade",
+        "service_start",
+        "service_stop",
+        "service_restart",
+        "service_enable",
+        "process_kill"
+      ]
+    },
+    "package_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package",
+        "download_bytes",
+        "installed_size_delta_bytes"
+      ],
+      "properties": {
+        "package": { "type": "string", "maxLength": 128 },
+        "from_version": { "type": "string", "maxLength": 64 },
+        "to_version": { "type": "string", "maxLength": 64 },
+        "download_bytes": { "type": "integer", "minimum": 0 },
+        "installed_size_delta_bytes": { "type": "integer" },
+        "service_effect": { "type": "string" }
+      }
+    },
+    "service_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service", "action"],
+      "properties": {
+        "service": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 64 },
+        "expected_state": { "type": "string", "maxLength": 32 }
+      }
+    },
+    "transaction_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "plan_id",
+        "created_at_ms",
+        "requester_uid",
+        "kind",
+        "requested_targets",
+        "package_changes",
+        "service_changes",
+        "unknown_effects",
+        "state_fingerprint_sha256",
+        "approval_required"
+      ],
+      "properties": {
+        "version": { "type": "string", "const": "sentia.v1" },
+        "plan_id": { "type": "string", "maxLength": 64 },
+        "created_at_ms": { "type": "integer", "minimum": 0 },
+        "requester_uid": { "type": "integer", "minimum": 0 },
+        "kind": { "$ref": "#/$defs/transaction_kind" },
+        "requested_targets": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 128 }
+        },
+        "package_changes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/package_delta" }
+        },
+        "service_changes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/service_delta" }
+        },
+        "unknown_effects": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 256 }
+        },
+        "state_fingerprint_sha256": { "$ref": "#/$defs/sha256" },
+        "approval_required": { "type": "boolean" }
+      }
+    },
+    "approval_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "caller_uid",
+        "operation_digest_sha256",
+        "relevant_state_digest_sha256",
+        "issued_at_ms",
+        "expires_at_ms",
+        "single_use",
+        "polkit_action"
+      ],
+      "properties": {
+        "session_id": { "type": "string", "maxLength": 64 },
+        "caller_uid": { "type": "integer", "minimum": 0 },
+        "operation_digest_sha256": { "$ref": "#/$defs/sha256" },
+        "relevant_state_digest_sha256": { "$ref": "#/$defs/sha256" },
+        "issued_at_ms": { "type": "integer", "minimum": 0 },
+        "expires_at_ms": { "type": "integer", "minimum": 0 },
+        "single_use": { "type": "boolean" },
+        "polkit_action": { "type": "string", "maxLength": 128 }
+      }
+    },
+    "required_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "rationale"],
+      "properties": {
+        "case_id": { "type": "string", "maxLength": 64 },
+        "rationale": { "type": "string", "maxLength": 256 }
+      }
+    },
+    "approval_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "approval_id",
+        "transaction_plan",
+        "binding",
+        "required_evidence"
+      ],
+      "properties": {
+        "version": { "type": "string", "const": "sentia.v1" },
+        "approval_id": { "type": "string", "maxLength": 64 },
+        "transaction_plan": { "$ref": "#/$defs/transaction_plan" },
+        "binding": { "$ref": "#/$defs/approval_binding" },
+        "required_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/required_evidence" }
+        }
+      }
+    },
+    "approval_grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_id",
+        "grant_id",
+        "broker_token",
+        "granted_at_ms",
+        "expires_at_ms"
+      ],
+      "properties": {
+        "approval_id": { "type": "string", "maxLength": 64 },
+        "grant_id": { "type": "string", "maxLength": 64 },
+        "broker_token": { "type": "string", "maxLength": 128 },
+        "granted_at_ms": { "type": "integer", "minimum": 0 },
+        "expires_at_ms": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

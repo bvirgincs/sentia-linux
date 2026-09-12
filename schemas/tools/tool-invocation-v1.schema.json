@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/tools/tool-invocation-v1.schema.json",
+  "title": "Sentia Structured Tool Invocation v1",
+  "description": "Shared typed invocation/result envelope for registered tools.",
+  "$defs": {
+    "tool_name": {
+      "$ref": "tool-registry-v1.schema.json#/$defs/tool_name"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "timestamp_ms"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["router", "cli", "ui", "system_task"]
+        },
+        "timestamp_ms": { "type": "integer", "minimum": 0 },
+        "request_id": { "type": "string", "maxLength": 64 }
+      }
+    },
+    "evidence_pointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["command", "log", "json", "snapshot", "checksum"]
+        },
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "tool_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "request_id",
+        "tool_name",
+        "arguments",
+        "max_input_bytes",
+        "provenance"
+      ],
+      "properties": {
+        "version": { "type": "string", "const": "sentia.v1" },
+        "request_id": { "type": "string", "maxLength": 64 },
+        "tool_name": { "$ref": "#/$defs/tool_name" },
+        "arguments": { "type": "object" },
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 1048576
+        },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "tool_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "request_id",
+        "tool_name",
+        "status",
+        "result",
+        "max_output_bytes",
+        "duration_ms"
+      ],
+      "properties": {
+        "version": { "type": "string", "const": "sentia.v1" },
+        "request_id": { "type": "string", "maxLength": 64 },
+        "tool_name": { "$ref": "#/$defs/tool_name" },
+        "status": {
+          "type": "string",
+          "enum": ["ok", "unavailable", "permission_denied", "timeout", "failed"]
+        },
+        "result": { "type": "object" },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 10485760
+        },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "error_code": { "type": "string", "maxLength": 64 },
+        "evidence": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/evidence_pointer" }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/tool_input" },
+    { "$ref": "#/$defs/tool_output" }
+  ]
+}

@@ -1,0 +1,12 @@
+[package]
+name = "sentia-protocol"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+license = "Apache-2.0"
+description = "Shared contracts for Sentia router, tools, providers, and evidence."
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

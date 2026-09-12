@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/acceptance/acceptance-manifest-v1.schema.json",
+  "title": "Sentia Acceptance Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "manifest_id",
+    "release_blocking",
+    "evidence_semantics",
+    "domains",
+    "failure_injection"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "sentia.acceptance.v1"
+    },
+    "manifest_id": { "type": "string", "maxLength": 80 },
+    "release_blocking": { "type": "boolean" },
+    "evidence_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_flag_meaning",
+        "evidence_required_fields",
+        "allowed_evidence_status"
+      ],
+      "properties": {
+        "required_flag_meaning": { "type": "string" },
+        "evidence_required_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "allowed_evidence_status": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["missing", "collected", "verified", "failed", "redacted"]
+          }
+        }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 13,
+      "items": { "$ref": "#/$defs/domain" }
+    },
+    "failure_injection": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "domain_name": {
+      "type": "string",
+      "enum": [
+        "BUILD",
+        "LIVE",
+        "INSTALL",
+        "DISK",
+        "OFFLINE",
+        "AI",
+        "TOOLS",
+        "SHELL",
+        "HEALTH",
+        "ROUTER",
+        "PRIVACY",
+        "TRUST",
+        "SECUREBOOT"
+      ]
+    },
+    "evidence_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum_status",
+        "required_artifacts",
+        "required_record_fields"
+      ],
+      "properties": {
+        "minimum_status": {
+          "type": "string",
+          "enum": ["collected", "verified"]
+        },
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "required_record_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "required", "assertion", "evidence"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]+-[A-Z0-9-]+$"
+        },
+        "required": { "type": "boolean" },
+        "assertion": { "type": "string" },
+        "evidence": { "$ref": "#/$defs/evidence_requirements" }
+      }
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "required", "cases"],
+      "properties": {
+        "domain": { "$ref": "#/$defs/domain_name" },
+        "required": { "type": "boolean" },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/case" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/tools/tool-registry-v1.schema.json",
+  "title": "Sentia Required Tool Registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "tools"],
+  "properties": {
+    "version": { "type": "string", "const": "sentia.v1" },
+    "tools": {
+      "type": "array",
+      "minItems": 42,
+      "items": { "$ref": "#/$defs/tool_definition" }
+    }
+  },
+  "$defs": {
+    "tool_name": {
+      "type": "string",
+      "enum": [
+        "command_exists",
+        "command_lookup",
+        "command_help",
+        "command_history",
+        "apt_search",
+        "apt_package_info",
+        "apt_package_policy",
+        "apt_simulate_install",
+        "apt_install",
+        "apt_remove",
+        "apt_update",
+        "apt_upgrade",
+        "package_owns_file",
+        "service_list",
+        "service_status",
+        "service_start",
+        "service_stop",
+        "service_restart",
+        "service_enable",
+        "journal_recent",
+        "journal_errors",
+        "kernel_messages",
+        "cpu_status",
+        "memory_status",
+        "swap_status",
+        "filesystem_status",
+        "disk_status",
+        "disk_health",
+        "temperature_status",
+        "network_status",
+        "network_interfaces",
+        "listening_ports",
+        "process_list",
+        "process_details",
+        "process_kill",
+        "file_exists",
+        "file_type",
+        "file_permissions",
+        "directory_contents",
+        "disk_usage",
+        "os_information",
+        "hardware_information"
+      ]
+    },
+    "tool_area": {
+      "type": "string",
+      "enum": [
+        "commands",
+        "packages",
+        "services",
+        "logs",
+        "resources",
+        "network_processes",
+        "files_system"
+      ]
+    },
+    "privilege_class": {
+      "type": "string",
+      "enum": ["user", "elevated_broker", "root_broker"]
+    },
+    "privacy_class": {
+      "type": "string",
+      "enum": ["public", "session", "host_sensitive", "restricted", "secret"]
+    },
+    "cancellation_policy": {
+      "type": "string",
+      "enum": ["not_cancellable", "best_effort", "must_cancel"]
+    },
+    "tool_definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "area",
+        "privilege_class",
+        "privacy_class",
+        "input_schema_ref",
+        "output_schema_ref",
+        "provenance_required",
+        "timeout_ms",
+        "cancellation_policy",
+        "max_input_bytes",
+        "max_output_bytes"
+      ],
+      "properties": {
+        "name": { "$ref": "#/$defs/tool_name" },
+        "area": { "$ref": "#/$defs/tool_area" },
+        "privilege_class": { "$ref": "#/$defs/privilege_class" },
+        "privacy_class": { "$ref": "#/$defs/privacy_class" },
+        "input_schema_ref": { "type": "string", "maxLength": 200 },
+        "output_schema_ref": { "type": "string", "maxLength": 200 },
+        "provenance_required": { "type": "boolean" },
+        "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 900000 },
+        "cancellation_policy": { "$ref": "#/$defs/cancellation_policy" },
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 1048576
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 10485760
+        }
+      }
+    }
+  }
+}

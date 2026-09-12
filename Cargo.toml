@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+default-members = ["crates/sentia-protocol"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = { version = "=1.0.140" }
