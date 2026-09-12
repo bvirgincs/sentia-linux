@@ -61,6 +61,18 @@ EOF_CHROOT
 mv "${work_livebuild_dir}/config/archives/sentia-overlay.list.chroot.tmp" \
   "${work_livebuild_dir}/config/archives/sentia-overlay.list.chroot"
 
+# Paths are relative to the squashfs source root. live-build reinstalls the
+# chroot-mode apt source during the binary stage and only removes it after the
+# filesystem image has been built, so exclude both the build-time archive and
+# its sources entry explicitly rather than relying on that ordering.
+mkdir -p "${work_livebuild_dir}/config/rootfs"
+cat > "${work_livebuild_dir}/config/rootfs/excludes.tmp" <<EOF_EXCLUDES
+${SENTIA_BUILD_ARCHIVE_PATH#/}
+etc/apt/sources.list.d/sentia-overlay.list
+EOF_EXCLUDES
+mv "${work_livebuild_dir}/config/rootfs/excludes.tmp" \
+  "${work_livebuild_dir}/config/rootfs/excludes"
+
 epoch="$(source_date_epoch)"
 
 iso_build_command="$(cat <<CMD

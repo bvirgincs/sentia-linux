@@ -33,15 +33,13 @@ install -m 0644 "${overlay_keyring}" chroot/usr/share/keyrings/sentia-archive-ke
 
 lb chroot noauto
 
-# The build-time archive must not reach the shipped filesystem. Installed
-# systems get their local archive from sentia-offline-repository.
-#
-# The sources entry has to go with it: `lb binary` runs apt inside the chroot
-# again, and a file: source pointing at a removed directory fails the build
-# with "does not have a Release file".
-rm -rf "${overlay_target}"
-rm -f chroot/etc/apt/sources.list.d/sentia-overlay.list \
-      chroot/etc/apt/sources.list.d/sentia-overlay.sources
-
+# The archive deliberately stays in the chroot here. `lb binary` reinstalls the
+# chroot-mode apt sources (mode-archives-chroot) before building the squashfs,
+# so removing it at this point makes the binary stage fail on a dangling file:
+# source. config/rootfs/excludes keeps both out of the shipped filesystem
+# instead; installed systems get their local archive from
+# sentia-offline-repository.
 lb installer noauto
 lb binary noauto
+
+rm -rf "${overlay_target}"
