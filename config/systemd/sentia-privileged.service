@@ -1,0 +1,48 @@
+[Unit]
+Description=Sentia narrowly authorized system operations
+Documentation=file:/usr/share/doc/sentia-privileged/README.md
+Requires=dbus.service
+After=dbus.service systemd-logind.service polkit.service
+
+[Service]
+Type=dbus
+BusName=org.sentia.System1
+ExecStart=/usr/libexec/sentia/sentia-privileged
+User=root
+Group=root
+UMask=0077
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectSystem=full
+# The separate APT worker must update dpkg-managed configuration and binaries.
+# It inherits the broker sandbox; making /usr read-only would fake APT support.
+ReadWritePaths=/etc /usr /var /boot /opt /srv /run
+InaccessiblePaths=-/etc/sentia/providers -/var/lib/sentia/credentials -/var/lib/sentia/providers -/run/user
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER CAP_FSETID CAP_KILL CAP_SETGID CAP_SETUID CAP_SETFCAP CAP_SYS_CHROOT CAP_AUDIT_WRITE
+AmbientCapabilities=
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+TasksMax=128
+MemoryMax=768M
+TimeoutStopSec=30
+KillMode=control-group
+StandardOutput=journal
+StandardError=journal
+Environment=RUST_BACKTRACE=0
+
+[Install]
+WantedBy=multi-user.target

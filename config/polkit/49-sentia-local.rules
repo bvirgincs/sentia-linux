@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+// Denial only: never grant root/admin a wildcard authorization or cache it.
+polkit.addRule(function(action, subject) {
+    var actions = [
+        "org.sentia.system.service-start",
+        "org.sentia.system.service-stop",
+        "org.sentia.system.service-restart",
+        "org.sentia.system.service-enable",
+        "org.sentia.system.process-terminate",
+        "org.sentia.system.package-install",
+        "org.sentia.system.package-remove",
+        "org.sentia.system.package-update",
+        "org.sentia.system.package-upgrade"
+    ];
+    if (actions.indexOf(action.id) !== -1 && (!subject.local || !subject.active)) {
+        return polkit.Result.NO;
+    }
+});
