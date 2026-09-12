@@ -17,10 +17,29 @@ iso_path="$(latest_iso_path || true)"
 
 xorriso -indev "${iso_path}" -pvd_info >/dev/null
 
-ovmf_code="/usr/share/OVMF/OVMF_CODE.fd"
-ovmf_vars_template="/usr/share/OVMF/OVMF_VARS.fd"
-require_file "${ovmf_code}"
-require_file "${ovmf_vars_template}"
+# Debian and Ubuntu ship the 4 MB firmware split under different names; the
+# harness resolves the same candidates.
+first_readable_file() {
+  local candidate
+  for candidate in "$@"; do
+    if [[ -r "${candidate}" ]]; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+ovmf_code="$(first_readable_file \
+  /usr/share/OVMF/OVMF_CODE_4M.fd \
+  /usr/share/OVMF/OVMF_CODE.fd \
+  /usr/share/ovmf/OVMF.fd)" ||
+  die "no readable OVMF firmware code image found; install the ovmf package"
+ovmf_vars_template="$(first_readable_file \
+  /usr/share/OVMF/OVMF_VARS_4M.fd \
+  /usr/share/OVMF/OVMF_VARS.fd)" ||
+  die "no readable OVMF variable store template found; install the ovmf package"
+log "firmware: ${ovmf_code} with variables from ${ovmf_vars_template}"
 
 vm_run_dir="${VM_STAGE_DIR}/iso-smoke"
 mkdir -p "${vm_run_dir}"
