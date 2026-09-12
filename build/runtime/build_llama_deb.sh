@@ -12,8 +12,12 @@ mkdir -p "${PKG_OUT}" "${LOG_DIR}"
 
 SOURCE_DIR="$(${SENTIA_RUNTIME_REPO_ROOT}/build/runtime/prepare_llama_source.sh | tail -n 1)"
 
-log "building llama.cpp Debian package under heavy lock"
-run_with_heavy_lock bash -lc "cd '${SOURCE_DIR}' && DEB_BUILD_OPTIONS='parallel=2' dpkg-buildpackage -us -uc -b -j2 -d 2>&1 | tee '${LOG_DIR}/llama-dpkg-build.log'"
+# Two is the correct default on a shared development host, where a local test
+# VM competes for memory. A dedicated build runner should raise this.
+LLAMA_BUILD_JOBS="${SENTIA_BUILD_JOBS:-2}"
+
+log "building llama.cpp Debian package under heavy lock with ${LLAMA_BUILD_JOBS} jobs"
+run_with_heavy_lock bash -lc "cd '${SOURCE_DIR}' && DEB_BUILD_OPTIONS='parallel=${LLAMA_BUILD_JOBS}' dpkg-buildpackage -us -uc -b -j${LLAMA_BUILD_JOBS} -d 2>&1 | tee '${LOG_DIR}/llama-dpkg-build.log'"
 
 find "$(dirname "${SOURCE_DIR}")" -maxdepth 1 -type f -name '*.deb' -print -exec cp -f {} "${PKG_OUT}/" \;
 if ! ls -1 "${PKG_OUT}"/*.deb >/dev/null 2>&1; then

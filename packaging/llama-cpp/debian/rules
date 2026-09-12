@@ -45,8 +45,11 @@ override_dh_auto_configure:
 	 -DLLAMA_TOOLS_INSTALL=OFF \
 	 -DLLAMA_TESTS_INSTALL=OFF
 
+# Honour the parallelism the caller selected; see build_llama_deb.sh.
+LLAMA_JOBS ?= $(or $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS))),2)
+
 override_dh_auto_build:
-	dh_auto_build -- -j2
+	dh_auto_build -- -j$(LLAMA_JOBS)
 
 # Upstream only adds tools/ when LLAMA_BUILD_TOOLS is on, and llama-server lives
 # under tools/server, so LLAMA_BUILD_TOOLS=OFF silently produced a package with
