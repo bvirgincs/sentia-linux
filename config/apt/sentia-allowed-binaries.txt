@@ -13,6 +13,7 @@ sentia-local-broker
 sentia-router
 sentia-terminal
 sentia-system-tools
+sentia-providers
 sentia-health
 sentia-firstboot
 sentia-docs

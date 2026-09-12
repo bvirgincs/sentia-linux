@@ -1,0 +1,13 @@
+# Sentia AI stack for live-build (Debian 13/Trixie).
+#
+# This list is what makes the image Sentia rather than a minimal Debian live
+# system. The local AI must work immediately after installation with no cloud
+# account and no Internet connection, so the runtime and the model are both
+# installed into the image rather than downloaded on first use.
+sentia-router
+sentia-system-tools
+sentia-terminal
+sentia-health
+sentia-firstboot
+sentia-llama-cpp
+sentia-granite-model

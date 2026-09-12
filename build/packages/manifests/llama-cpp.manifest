@@ -1,0 +1,7 @@
+# llama.cpp runtime. The upstream source tree is fetched separately by
+# fetch-llama-cpp-source.sh and the debian/ directory is overlaid onto it.
+packaging/llama-cpp
+config/llama
+config/systemd/sentia-local-llama.service
+config/systemd/sentia-local-llama-readiness.service
+build/runtime/probe_llama_runtime.py

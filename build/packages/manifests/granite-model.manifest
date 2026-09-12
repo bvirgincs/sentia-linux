@@ -1,0 +1,4 @@
+# Pinned IBM Granite 4.2 3B GGUF payload. The model itself is fetched by
+# fetch-granite-model.sh into artifacts/downloads/ and is never source-controlled.
+packaging/granite-model
+build/runtime/verify_granite_model.py

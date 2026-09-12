@@ -5,3 +5,7 @@ sentia-offline-repository
 sentia-desktop
 sentia-calamares-settings
 sentia-live
+sentia-ai
+sentia-llama-cpp
+sentia-granite-model
+sentia-command-index

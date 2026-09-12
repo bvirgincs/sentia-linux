@@ -16,7 +16,7 @@ Homepage: https://github.com/ggml-org/llama.cpp
 
 Package: sentia-llama-cpp
 Architecture: amd64
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, adduser
 Recommends: sentia-granite-model
 Description: Local CPU llama.cpp runtime for Sentia
  Native local inference runtime package for Sentia Linux.

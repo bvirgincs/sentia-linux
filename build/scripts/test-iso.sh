@@ -30,91 +30,36 @@ first_readable_file() {
   return 1
 }
 
-ovmf_code="$(first_readable_file \
-  /usr/share/OVMF/OVMF_CODE_4M.fd \
-  /usr/share/OVMF/OVMF_CODE.fd \
-  /usr/share/ovmf/OVMF.fd)" ||
-  die "no readable OVMF firmware code image found; install the ovmf package"
-ovmf_vars_template="$(first_readable_file \
-  /usr/share/OVMF/OVMF_VARS_4M.fd \
-  /usr/share/OVMF/OVMF_VARS.fd)" ||
-  die "no readable OVMF variable store template found; install the ovmf package"
-log "firmware: ${ovmf_code} with variables from ${ovmf_vars_template}"
+# The guest itself is the only reliable witness. tests/vm/live_probe.py boots the
+# ISO, logs in over the serial console and runs the acceptance checks inside the
+# running live system, so a missing console message can no longer be mistaken
+# for a failed boot, or a silent boot for a successful one.
+require_command python3
 
 vm_run_dir="${VM_STAGE_DIR}/iso-smoke"
-mkdir -p "${vm_run_dir}"
-cp -f "${ovmf_vars_template}" "${vm_run_dir}/OVMF_VARS.fd"
+probe_report="${vm_run_dir}/live-probe.json"
 
-if [[ ! -f "${vm_run_dir}/smoke.qcow2" ]]; then
-  qemu-img create -f qcow2 "${vm_run_dir}/smoke.qcow2" 24G >/dev/null
-fi
-
-serial_log="${vm_run_dir}/serial.log"
-rm -f "${serial_log}"
-
-# KVM where the host provides it; TCG is a correctness fallback, not a
-# performance-representative run.
-if [[ -r /dev/kvm && -w /dev/kvm ]]; then
-  accel="kvm"
-  cpu_model="host"
-  boot_timeout="${SENTIA_ISO_BOOT_TIMEOUT:-180}"
-else
-  accel="tcg"
-  cpu_model="max"
-  boot_timeout="${SENTIA_ISO_BOOT_TIMEOUT:-900}"
-fi
-log "smoke boot acceleration: ${accel}"
-
-set +e
-run_heavy "qemu ISO smoke boot (${accel})" timeout "${boot_timeout}s" qemu-system-x86_64 \
-  -machine "q35,accel=${accel}" \
-  -cpu "${cpu_model}" \
-  -smp 2 \
-  -m 4096 \
-  -name sentia-iso-smoke \
-  -display none \
-  -monitor none \
-  -serial "file:${serial_log}" \
-  -no-reboot \
-  -drive if=pflash,format=raw,readonly=on,file="${ovmf_code}" \
-  -drive if=pflash,format=raw,file="${vm_run_dir}/OVMF_VARS.fd" \
-  -drive if=virtio,format=qcow2,file="${vm_run_dir}/smoke.qcow2" \
-  -cdrom "${iso_path}"
-qemu_rc=$?
-set -e
-
-if [[ "${qemu_rc}" -ne 0 && "${qemu_rc}" -ne 124 ]]; then
-  die "QEMU smoke boot failed with exit code ${qemu_rc}; see ${serial_log}"
-fi
-
-# A timeout on its own proves nothing: the guest could have panicked or sat at
-# the firmware. Require evidence from the serial console that the live system
-# actually reached the graphical target.
-require_file "${serial_log}"
-declare -A boot_evidence=(
-  ["kernel reached userspace"]="systemd\[1\]"
-  ["live filesystem mounted"]="Reached target"
-  ["display manager started"]="[Ll]ight[Dd][Mm]"
-  ["graphical target reached"]="Reached target Graphical Interface|Reached target graphical.target"
+probe_args=(
+  "${REPO_ROOT}/tests/vm/live_probe.py"
+  --iso "${iso_path}"
+  --run-dir "${vm_run_dir}"
 )
-missing_evidence=()
-for evidence in "${!boot_evidence[@]}"; do
-  grep -Eq "${boot_evidence[${evidence}]}" "${serial_log}" || missing_evidence+=("${evidence}")
-done
-if [[ "${#missing_evidence[@]}" -gt 0 ]]; then
-  echo "--- last 60 serial lines ---" >&2
-  tail -n 60 "${serial_log}" >&2
-  die "ISO boot evidence missing: ${missing_evidence[*]}; see ${serial_log}"
+if [[ "${SENTIA_ISO_PROBE_OFFLINE:-0}" == "1" ]]; then
+  probe_args+=(--offline)
 fi
-log "ISO boot evidence found for all ${#boot_evidence[@]} checks"
+
+run_heavy "live ISO acceptance probe" python3 "${probe_args[@]}"
+require_file "${probe_report}"
+serial_log="${vm_run_dir}/serial.log"
 
 {
   echo "generated_at=$(timestamp_utc)"
   echo "iso_path=${iso_path}"
-  echo "qemu_exit_code=${qemu_rc}"
-  echo "accel=${accel}"
+  echo "probe_report=${probe_report}"
   echo "serial_log=${serial_log}"
+  echo "checks_passed=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["checks"]))' "${probe_report}")"
 } | write_atomic "${MANIFEST_DIR}/test-iso.txt"
 
-log "ISO smoke boot completed with qemu exit code ${qemu_rc}"
+log "live ISO acceptance probe passed"
+log "probe report: ${probe_report}"
 log "serial log: ${serial_log}"

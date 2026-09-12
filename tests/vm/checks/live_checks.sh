@@ -1,0 +1,175 @@
+#!/bin/bash
+# Sentia live-image acceptance checks.
+#
+# This script is NOT part of the product. It is delivered to the guest on a
+# separate read-only check ISO by tests/vm/live_probe.py, so that no test hook
+# has to be shipped inside the Sentia image itself.
+#
+# Every check prints exactly one line:
+#   CHECK <id> PASS <detail>
+#   CHECK <id> FAIL <detail>
+# The harness parses those lines; anything else is diagnostic noise.
+
+export LC_ALL=C
+export PAGER=cat
+export SYSTEMD_COLORS=0
+
+check() {
+  local id="$1" detail="$2" status="$3"
+  printf 'CHECK %s %s %s\n' "${id}" "${status}" "${detail//$'\n'/ | }"
+}
+
+# LIVE-IDENTITY: the image must identify itself as Sentia, not as Debian.
+os_id="$(. /usr/lib/os-release && printf '%s' "${ID}")"
+os_pretty="$(. /usr/lib/os-release && printf '%s' "${PRETTY_NAME}")"
+if [[ "${os_id}" == "sentia" ]]; then
+  check LIVE-IDENTITY "${os_pretty}" PASS
+else
+  check LIVE-IDENTITY "ID=${os_id} PRETTY_NAME=${os_pretty}" FAIL
+fi
+
+# The /etc path must resolve to the file Debian's base-files owns.
+etc_target="$(readlink -f /etc/os-release || true)"
+if [[ "${etc_target}" == "/usr/lib/os-release" ]]; then
+  check LIVE-OSRELEASE-LINK "${etc_target}" PASS
+else
+  check LIVE-OSRELEASE-LINK "resolves to ${etc_target:-<missing>}" FAIL
+fi
+
+# LIVE-VENDOR: dpkg must report Sentia as the vendor with Debian as parent.
+vendor="$(dpkg-vendor --query Vendor 2>&1)"
+parent="$(dpkg-vendor --query Parent 2>&1)"
+if [[ "${vendor}" == "Sentia" && "${parent}" == "Debian" ]]; then
+  check LIVE-VENDOR "vendor=${vendor} parent=${parent}" PASS
+else
+  check LIVE-VENDOR "vendor=${vendor} parent=${parent}" FAIL
+fi
+
+# LIVE-HOSTNAME: a Sentia live session must not present itself as "debian".
+hostname_value="$(hostname)"
+if [[ "${hostname_value}" == sentia* ]]; then
+  check LIVE-HOSTNAME "${hostname_value}" PASS
+else
+  check LIVE-HOSTNAME "${hostname_value}" FAIL
+fi
+
+# LIVE-SYSTEMD: the boot must actually finish.
+system_state="$(systemctl is-system-running 2>&1 || true)"
+if [[ "${system_state}" == "running" ]]; then
+  check LIVE-SYSTEMD "${system_state}" PASS
+else
+  check LIVE-SYSTEMD "${system_state}" FAIL
+fi
+
+failed_units="$(systemctl list-units --state=failed --no-legend --plain 2>/dev/null | awk '{print $1}' | tr '\n' ' ')"
+if [[ -z "${failed_units// /}" ]]; then
+  check LIVE-NO-FAILED-UNITS "none" PASS
+else
+  check LIVE-NO-FAILED-UNITS "${failed_units}" FAIL
+fi
+
+# LIVE-GRAPHICAL: graphical.target is the real gate, not a console message.
+graphical_state="$(systemctl is-active graphical.target 2>&1 || true)"
+if [[ "${graphical_state}" == "active" ]]; then
+  check LIVE-GRAPHICAL "graphical.target ${graphical_state}" PASS
+else
+  check LIVE-GRAPHICAL "graphical.target ${graphical_state}" FAIL
+fi
+
+for unit_check in LIVE-LIGHTDM:lightdm.service LIVE-NETWORKMANAGER:NetworkManager.service; do
+  id="${unit_check%%:*}"
+  unit="${unit_check##*:}"
+  state="$(systemctl is-active "${unit}" 2>&1 || true)"
+  if [[ "${state}" == "active" ]]; then
+    check "${id}" "${unit} ${state}" PASS
+  else
+    check "${id}" "${unit} ${state}" FAIL
+  fi
+done
+
+# LIVE-XORG: LightDM being active is not proof that a display server runs.
+if pgrep -a Xorg >/dev/null 2>&1; then
+  check LIVE-XORG "$(pgrep -a Xorg | head -n 1)" PASS
+else
+  check LIVE-XORG "no Xorg process" FAIL
+fi
+
+# LIVE-XSESSION: the greeter must have an Xfce session to offer.
+if [[ -f /usr/share/xsessions/xfce.desktop ]]; then
+  check LIVE-XSESSION "/usr/share/xsessions/xfce.desktop" PASS
+else
+  check LIVE-XSESSION "no xfce.desktop session file" FAIL
+fi
+
+# The applications the live image exists to provide.
+for bin_check in LIVE-BROWSER:chromium LIVE-INSTALLER:calamares LIVE-FILEMANAGER:thunar; do
+  id="${bin_check%%:*}"
+  binary="${bin_check##*:}"
+  path="$(command -v "${binary}" 2>/dev/null || true)"
+  if [[ -n "${path}" ]]; then
+    check "${id}" "${path}" PASS
+  else
+    check "${id}" "${binary} not installed" FAIL
+  fi
+done
+
+# LIVE-CHROMIUM-RUNS: the browser must execute as an ordinary user, not merely
+# be present on disk.
+chromium_version="$(chromium --version 2>&1 | head -n 1 || true)"
+if [[ "${chromium_version}" == *Chromium* ]]; then
+  check LIVE-CHROMIUM-RUNS "${chromium_version}" PASS
+else
+  check LIVE-CHROMIUM-RUNS "${chromium_version:-no output}" FAIL
+fi
+
+# LIVE-SENTIA-PACKAGES: the Sentia overlay must be present in the image.
+missing_packages=""
+for package in sentia-base sentia-desktop sentia-release sentia-archive-keyring \
+  sentia-repository-config sentia-offline-repository sentia-calamares-settings; do
+  if ! dpkg-query -W -f='${Status}' "${package}" 2>/dev/null | grep -q "install ok installed"; then
+    missing_packages="${missing_packages}${package} "
+  fi
+done
+if [[ -z "${missing_packages}" ]]; then
+  check LIVE-SENTIA-PACKAGES "all present" PASS
+else
+  check LIVE-SENTIA-PACKAGES "missing: ${missing_packages}" FAIL
+fi
+
+# LIVE-APT-NO-STABLE-ALIAS: installed sources must name literal trixie suites so
+# that a future Debian release cannot silently upgrade Sentia users.
+apt_sources="$(cat /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true)"
+if grep -qE '^[[:space:]]*(Suites:.*\bstable\b|deb .*[[:space:]]stable[[:space:]])' <<<"${apt_sources}"; then
+  check LIVE-APT-NO-STABLE-ALIAS "unversioned stable suite configured" FAIL
+else
+  check LIVE-APT-NO-STABLE-ALIAS "literal suites only" PASS
+fi
+
+if grep -qs "Signed-By" /etc/apt/sources.list.d/sentia.sources; then
+  check LIVE-APT-SENTIA-SIGNED-BY "$(grep -h 'Signed-By' /etc/apt/sources.list.d/sentia.sources)" PASS
+else
+  check LIVE-APT-SENTIA-SIGNED-BY "sentia.sources missing or has no Signed-By" FAIL
+fi
+
+# LIVE-APT-OFFLINE-ARCHIVE: apt must read the signed local Sentia archive with
+# no network at all, which is what an offline installation depends on.
+apt_update_output="$(sudo apt-get \
+  -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/sentia.sources \
+  -o Dir::Etc::sourceparts=/dev/null update 2>&1 || true)"
+if grep -q "sentia" <<<"${apt_update_output}" && ! grep -qi "^E:" <<<"${apt_update_output}"; then
+  check LIVE-APT-OFFLINE-ARCHIVE "${apt_update_output}" PASS
+else
+  check LIVE-APT-OFFLINE-ARCHIVE "${apt_update_output}" FAIL
+fi
+
+# LIVE-NO-BUILD-ARCHIVE: build-time trust must not be shipped in the image.
+leaked=""
+[[ -e /srv/sentia-build-archive ]] && leaked="${leaked}/srv/sentia-build-archive "
+[[ -e /etc/apt/sources.list.d/sentia-overlay.list ]] && leaked="${leaked}/etc/apt/sources.list.d/sentia-overlay.list "
+if [[ -z "${leaked}" ]]; then
+  check LIVE-NO-BUILD-ARCHIVE "clean" PASS
+else
+  check LIVE-NO-BUILD-ARCHIVE "leaked: ${leaked}" FAIL
+fi
+
+echo "SENTIA_CHECKS_COMPLETE"

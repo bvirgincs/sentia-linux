@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+# The local inference broker and the llama.cpp runtime share one unprivileged
+# system account. Both packages create it idempotently because either may be
+# installed first.
+if [ "$1" = "configure" ]; then
+  if ! getent passwd sentia-inference >/dev/null; then
+    adduser --system --group --no-create-home \
+      --home /nonexistent --shell /usr/sbin/nologin \
+      --gecos "Sentia local inference" sentia-inference
+  fi
+fi
+
+#DEBHELPER#
+
+exit 0

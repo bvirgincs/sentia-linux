@@ -1,0 +1,15 @@
+# Sentia AI stack (packaging/ai). The whole Rust workspace is staged because
+# debian/rules compiles it once and splits the result across binary packages.
+packaging/ai
+Cargo.toml
+Cargo.lock
+crates
+tests
+shell
+config/router
+config/retrieval
+config/providers
+config/systemd
+config/dbus
+config/polkit
+config/desktop-apps

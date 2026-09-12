@@ -1,0 +1,7 @@
+sentia-ai (0.1.0-1) unstable; urgency=medium
+
+  * Initial Debian packaging for the Sentia AI stack: router, local inference
+    broker, system tools, terminal integration, health monitoring, provider
+    adapters and the first-boot wizard.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 22:00:00 +0000

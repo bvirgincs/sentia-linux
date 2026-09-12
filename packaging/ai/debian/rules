@@ -1,0 +1,141 @@
+#!/usr/bin/make -f
+#
+# Sentia AI stack.
+#
+# The whole Rust workspace is compiled once and split across the binary
+# packages, rather than compiled once per package. The workspace lives in the
+# staging root two levels above this source package; build/packages/lib.sh
+# stages it there from build/packages/manifests/ai.manifest.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+WORKSPACE := $(CURDIR)/../..
+TARGET_DIR := $(CURDIR)/cargo-target
+RELEASE := $(TARGET_DIR)/release
+
+# Keep cargo entirely inside the build tree. Nothing may be written to the
+# builder's home directory, and the default parallelism must stay low enough
+# not to compete with a local test VM for memory.
+export CARGO_HOME = $(CURDIR)/cargo-home
+export CARGO_TARGET_DIR = $(TARGET_DIR)
+export CARGO_PROFILE_RELEASE_DEBUG = 0
+CARGO_JOBS ?= 2
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	rm -rf $(TARGET_DIR) $(CURDIR)/cargo-home
+
+override_dh_auto_build:
+	cd $(WORKSPACE) && cargo build --release --locked --workspace \
+	  --jobs $(CARGO_JOBS)
+
+override_dh_auto_test:
+	cd $(WORKSPACE) && cargo test --release --locked --workspace \
+	  --jobs $(CARGO_JOBS) --no-fail-fast
+
+# ---------------------------------------------------------------- sentia-router
+override_dh_auto_install:
+	# sentia-router: the AI abstraction plus the local inference broker.
+	install -D -m 0755 $(RELEASE)/sentia-router \
+	  debian/sentia-router/usr/libexec/sentia/sentia-router
+	install -D -m 0755 $(RELEASE)/sentia-local-broker \
+	  debian/sentia-router/usr/libexec/sentia/sentia-local-broker
+	install -D -m 0755 $(RELEASE)/sentia-retrieval \
+	  debian/sentia-router/usr/bin/sentia-retrieval
+	install -D -m 0644 $(WORKSPACE)/config/router/router.json \
+	  debian/sentia-router/usr/share/sentia/router/router.json
+	install -D -m 0644 $(WORKSPACE)/config/router/router-runtime.json \
+	  debian/sentia-router/etc/sentia/router-runtime.json
+	install -D -m 0644 $(WORKSPACE)/config/router/local-broker.json \
+	  debian/sentia-router/etc/sentia/local-broker.json
+	install -D -m 0644 $(WORKSPACE)/config/retrieval/sources.toml \
+	  debian/sentia-router/etc/sentia/retrieval/sources.toml
+	install -D -m 0644 $(WORKSPACE)/config/retrieval/query-policy.json \
+	  debian/sentia-router/etc/sentia/retrieval/query-policy.json
+	for unit in sentia-router.service sentia-router.socket \
+	            sentia-local-broker.service \
+	            sentia-index.service sentia-index.path sentia-index.timer; do \
+	  install -D -m 0644 $(WORKSPACE)/config/systemd/$$unit \
+	    debian/sentia-router/usr/lib/systemd/system/$$unit; \
+	done
+
+	# sentia-system-tools: privileged operations behind polkit.
+	install -D -m 0755 $(RELEASE)/sentia-privileged \
+	  debian/sentia-system-tools/usr/libexec/sentia/sentia-privileged
+	install -D -m 0644 $(WORKSPACE)/config/systemd/sentia-privileged.service \
+	  debian/sentia-system-tools/usr/lib/systemd/system/sentia-privileged.service
+	install -D -m 0644 $(WORKSPACE)/config/dbus/org.sentia.System1.conf \
+	  debian/sentia-system-tools/usr/share/dbus-1/system.d/org.sentia.System1.conf
+	install -D -m 0644 $(WORKSPACE)/config/dbus/org.sentia.System1.service \
+	  debian/sentia-system-tools/usr/share/dbus-1/system-services/org.sentia.System1.service
+	install -D -m 0644 $(WORKSPACE)/config/polkit/org.sentia.system.policy \
+	  debian/sentia-system-tools/usr/share/polkit-1/actions/org.sentia.system.policy
+	install -D -m 0644 $(WORKSPACE)/config/polkit/49-sentia-local.rules \
+	  debian/sentia-system-tools/usr/share/polkit-1/rules.d/49-sentia-local.rules
+
+	# sentia-terminal: ai(1), the GTK terminal and the Bash integration.
+	install -D -m 0755 $(RELEASE)/ai debian/sentia-terminal/usr/bin/ai
+	install -D -m 0755 $(RELEASE)/sentia-terminal \
+	  debian/sentia-terminal/usr/bin/sentia-terminal
+	install -D -m 0644 $(WORKSPACE)/shell/sentia-terminal-hook.bash \
+	  debian/sentia-terminal/usr/share/sentia/shell/sentia-terminal-hook.bash
+	install -D -m 0644 $(WORKSPACE)/shell/sentia-command-not-found-lib.bash \
+	  debian/sentia-terminal/usr/share/sentia/shell/sentia-command-not-found-lib.bash
+	install -D -m 0755 $(WORKSPACE)/shell/sentia-command-not-found.sh \
+	  debian/sentia-terminal/usr/share/sentia/shell/sentia-command-not-found.sh
+	install -D -m 0644 debian/profile.d-sentia-terminal.sh \
+	  debian/sentia-terminal/etc/profile.d/sentia-terminal.sh
+	install -D -m 0644 $(WORKSPACE)/config/desktop-apps/sentia-terminal.desktop \
+	  debian/sentia-terminal/usr/share/applications/sentia-terminal.desktop
+	install -D -m 0644 $(WORKSPACE)/config/desktop-apps/icons/sentia-terminal.svg \
+	  debian/sentia-terminal/usr/share/icons/hicolor/scalable/apps/sentia-terminal.svg
+
+	# sentia-health: the metrics daemon and the graphical monitor.
+	install -D -m 0755 $(RELEASE)/sentia-health \
+	  debian/sentia-health/usr/bin/sentia-health
+	install -D -m 0755 $(RELEASE)/sentia-monitor \
+	  debian/sentia-health/usr/bin/sentia-monitor
+	install -D -m 0644 $(WORKSPACE)/config/systemd/sentia-health.service \
+	  debian/sentia-health/usr/lib/systemd/system/sentia-health.service
+	install -D -m 0644 $(WORKSPACE)/config/desktop-apps/sentia-system-monitor.desktop \
+	  debian/sentia-health/usr/share/applications/sentia-system-monitor.desktop
+	install -D -m 0644 $(WORKSPACE)/config/desktop-apps/icons/sentia-monitor.svg \
+	  debian/sentia-health/usr/share/icons/hicolor/scalable/apps/sentia-monitor.svg
+
+	# sentia-providers: optional, isolated remote adapters.
+	install -D -m 0755 $(RELEASE)/sentia-provider-worker \
+	  debian/sentia-providers/usr/libexec/sentia-provider-worker
+	install -D -m 0644 $(WORKSPACE)/config/systemd/sentia-provider@.service \
+	  debian/sentia-providers/usr/lib/systemd/system/sentia-provider@.service
+	install -d debian/sentia-providers/usr/share/sentia/providers
+	for profile in $(WORKSPACE)/config/providers/*.toml; do \
+	  install -m 0644 $$profile \
+	    debian/sentia-providers/usr/share/sentia/providers/; \
+	done
+	install -D -m 0644 $(WORKSPACE)/config/providers/profile.schema.json \
+	  debian/sentia-providers/usr/share/sentia/providers/profile.schema.json
+
+	# sentia-firstboot: the skippable setup wizard.
+	install -D -m 0755 $(RELEASE)/sentia-firstboot \
+	  debian/sentia-firstboot/usr/bin/sentia-firstboot
+	install -D -m 0644 $(WORKSPACE)/config/desktop-apps/sentia-firstboot.desktop \
+	  debian/sentia-firstboot/usr/share/applications/sentia-firstboot.desktop
+	install -D -m 0644 $(WORKSPACE)/config/desktop-apps/icons/sentia-firstboot.svg \
+	  debian/sentia-firstboot/usr/share/icons/hicolor/scalable/apps/sentia-firstboot.svg
+
+# The router and broker run as system services but must not be enabled before
+# first boot has had a chance to configure a policy, and the desktop must never
+# wait for model startup. Ordering is expressed in the units themselves.
+override_dh_installsystemd:
+	dh_installsystemd -p sentia-router --name=sentia-router --no-start
+	dh_installsystemd -p sentia-router --name=sentia-local-broker --no-start
+	dh_installsystemd -p sentia-router --name=sentia-index --no-enable --no-start
+	dh_installsystemd -p sentia-system-tools --name=sentia-privileged --no-start
+	dh_installsystemd -p sentia-health --name=sentia-health
+	dh_installsystemd --remaining-packages --no-enable --no-start
+
+# Rust links its own runtime; dh_shlibdeps only needs the C libraries.
+override_dh_shlibdeps:
+	dh_shlibdeps -- --ignore-missing-info

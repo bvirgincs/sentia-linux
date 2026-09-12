@@ -1,0 +1,113 @@
+Source: sentia-ai
+Section: utils
+Priority: optional
+Maintainer: Sentia Developers <sentia-devel@invalid>
+Build-Depends:
+ debhelper-compat (= 13),
+ cargo,
+ rustc (>= 1.74),
+ pkgconf,
+ libglib2.0-dev,
+ libgtk-4-dev,
+ libvte-2.91-gtk4-dev,
+ libsqlite3-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/bvirgincs/sentia-linux
+
+Package: sentia-router
+Architecture: amd64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ adduser,
+ sentia-base
+Recommends: sentia-llama-cpp, sentia-granite-model
+Description: Sentia AI router and local inference broker
+ The router is the single AI abstraction used by every Sentia application.
+ Applications never talk to a model runtime or to a remote vendor directly;
+ they speak to the router over a per-user Unix socket.
+ .
+ The router implements the LOCAL_ONLY, LOCAL_PREFERRED, REMOTE_PREFERRED and
+ ASK_BEFORE_REMOTE policies, and falls back to local inference whenever a
+ remote provider cannot be used. The local provider is mandatory, so AI
+ assistance degrades in quality rather than disappearing.
+ .
+ This package also ships the peer-authenticated local broker that fronts the
+ llama.cpp runtime for the unprivileged sentia-inference system user.
+
+Package: sentia-system-tools
+Architecture: amd64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ polkitd,
+ sentia-router (= ${binary:Version})
+Description: Structured Sentia system inspection and privileged operations
+ Deterministic, typed tools that inspect and modify the system on behalf of
+ Sentia. Whenever Linux itself can determine a fact, the fact is measured
+ rather than guessed by a language model.
+ .
+ State-changing operations run through a narrowly authorized system service
+ with real polkit authorization. Model output is never executed as shell text
+ and a model can never grant its own approval.
+
+Package: sentia-terminal
+Architecture: amd64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ bash (>= 5),
+ sentia-router (= ${binary:Version})
+Description: Sentia AI-aware terminal and shell integration
+ A GTK4/VTE terminal plus Bash integration that adds AI assistance without
+ replacing Bash or changing normal command behaviour.
+ .
+ Provides the ai(1) command for explicit questions, deterministic fuzzy
+ matching for command typos, APT metadata search for missing commands and
+ optional diagnosis of failed commands. Assistance is configurable down to
+ completely off, and a conventional terminal is always available.
+
+Package: sentia-health
+Architecture: amd64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ procps
+Recommends: smartmontools, nvme-cli, lm-sensors
+Description: Sentia system health monitoring daemon and monitor application
+ Efficiently samples CPU, load, memory, swap, filesystem capacity, disk I/O,
+ SMART/NVMe health, temperatures, network utilisation, failed systemd units
+ and kernel errors using standard lightweight Linux facilities.
+ .
+ The same metrics are served to the Sentia router tools and to the graphical
+ Sentia System Monitor. Nothing is ever deleted or reconfigured automatically
+ because a health threshold was crossed.
+
+Package: sentia-providers
+Architecture: amd64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ sentia-router (= ${binary:Version})
+Description: Sentia remote AI provider adapters
+ Optional adapters that let a user benefit from an AI subscription they
+ already pay for, through officially supported vendor interfaces only.
+ .
+ Each adapter runs in an isolated worker with no access to the user's home
+ directory, Sentia runtime sockets or credential stores. Remote providers are
+ never required: with none configured, Sentia remains fully functional on the
+ local model.
+
+Package: sentia-firstboot
+Architecture: amd64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ sentia-router (= ${binary:Version})
+Description: Sentia first-boot setup wizard
+ A short, entirely skippable wizard that explains Sentia's offline local AI,
+ selects an AI routing policy, offers officially supported remote provider
+ integrations and sets privacy and terminal-assistance preferences.
+ .
+ The wizard works with no Internet connection and requires no account.
