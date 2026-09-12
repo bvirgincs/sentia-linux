@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 use sentia_privileged::broker::{revalidate, Caller, PlanStore};
-use sentia_privileged::executor::{apt_request, parse_start_ticks, service_arguments, trusted_path};
+use sentia_privileged::executor::{
+    apt_request, interpret_apt_response, parse_start_ticks, service_arguments, trusted_path,
+};
 use sentia_privileged::{parse_request, validate_package, validate_unit, Operation, ServiceAction};
 use serde_json::json;
 
@@ -243,4 +245,68 @@ fn privileged_paths_reject_relative_components_and_symlinks() {
     assert!(trusted_path(Path::new("/usr/../usr/bin/systemctl")).is_err());
     assert!(trusted_path(Path::new("/proc/self/exe")).is_err());
     assert!(trusted_path(Path::new("/usr/bin/systemctl")).is_ok());
+}
+
+#[test]
+fn worker_plan_mismatch_requires_fresh_approval_and_does_not_expose_freeform_errors() {
+    let operation = Operation::AptInstall { packages: vec!["curl".into()] };
+    let state = json!({"canonical_plan":{},"plan_digest":"a".repeat(64)});
+    let mut store = PlanStore::default();
+    let prepared = store.prepare(caller(), operation.clone(), state, 100).unwrap();
+    let consumed = store.consume(&prepared.plan.id, &prepared.digest, &caller(), 101).unwrap();
+    let request = apt_request(&operation, Some(&consumed)).unwrap();
+    let response = json!({
+        "protocol_version":"1.0",
+        "request_id":request["request_id"],
+        "operation":"apt_install",
+        "status":"error",
+        "error":{
+            "code":"plan_digest_mismatch",
+            "message":"UNTRUSTED worker message must not become root UI instructions"
+        }
+    });
+    let bytes = serde_json::to_vec(&response).unwrap();
+    assert_eq!(
+        interpret_apt_response(&bytes, false, &request, true).unwrap_err().0,
+        "state_changed_prepare_again"
+    );
+    assert_eq!(
+        store.consume(&prepared.plan.id, &prepared.digest, &caller(), 102).unwrap_err().0,
+        "unknown_or_used_plan"
+    );
+    let renewed = store.prepare(caller(), operation, json!({"plan_digest":"b".repeat(64)}), 102).unwrap();
+    assert_ne!(prepared.plan.id, renewed.plan.id);
+    assert_ne!(prepared.digest, renewed.digest);
+}
+
+#[test]
+fn worker_response_checks_exit_status_envelope_and_stable_plan_fields() {
+    let request = apt_request(&Operation::AptUpdate, None).unwrap();
+    let mut response = json!({
+        "protocol_version":"1.0",
+        "request_id":request["request_id"],
+        "operation":"apt_update",
+        "status":"ok",
+        "timestamp":"2026-09-12T00:00:00Z",
+        "result":{
+            "canonical_plan":{"sources_manifest":[]},
+            "plan_digest":"c".repeat(64),
+            "diagnostics":{"resolver_lock_mode":"unlocked"}
+        }
+    });
+    let original = interpret_apt_response(
+        &serde_json::to_vec(&response).unwrap(), true, &request, false,
+    ).unwrap();
+    response["timestamp"] = json!("2026-09-12T00:01:00Z");
+    response["result"]["diagnostics"]["resolver_lock_mode"] = json!("locked");
+    let changed_diagnostics = serde_json::to_vec(&response).unwrap();
+    assert_eq!(
+        interpret_apt_response(&changed_diagnostics, true, &request, false).unwrap(),
+        original
+    );
+    assert!(interpret_apt_response(&changed_diagnostics, false, &request, false).is_err());
+    response["request_id"] = json!("different-request");
+    assert!(interpret_apt_response(
+        &serde_json::to_vec(&response).unwrap(), true, &request, false,
+    ).is_err());
 }

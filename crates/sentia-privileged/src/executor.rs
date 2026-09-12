@@ -114,6 +114,25 @@ pub async fn run_fixed(
     input: Option<&[u8]>,
     timeout: Duration,
 ) -> Result<Vec<u8>> {
+    let output = run_helper(executable, arguments, input, timeout).await?;
+    if output.success {
+        Ok(output.stdout)
+    } else {
+        Err(Error("subprocess_failed"))
+    }
+}
+
+struct HelperOutput {
+    success: bool,
+    stdout: Vec<u8>,
+}
+
+async fn run_helper(
+    executable: &'static str,
+    arguments: &[String],
+    input: Option<&[u8]>,
+    timeout: Duration,
+) -> Result<HelperOutput> {
     if executable != SYSTEMCTL && executable != APT_WORKER {
         return Err(Error("executable_not_allowed"));
     }
@@ -174,13 +193,10 @@ pub async fn run_fixed(
         Ok((status, output))
     };
     match tokio::time::timeout(timeout, execution).await {
-        Ok(Ok((status, output))) => {
-            if status.success() {
-                Ok(output)
-            } else {
-                Err(Error("subprocess_failed"))
-            }
-        }
+        Ok(Ok((status, output))) => Ok(HelperOutput {
+            success: status.success(),
+            stdout: output,
+        }),
         result => {
             unsafe {
                 libc::kill(-pid, libc::SIGTERM);
@@ -454,7 +470,7 @@ async fn apt_call(operation: &Operation, expected: Option<&CanonicalPlan>) -> Re
     }
     let request = apt_request(operation, expected)?;
     let input = serde_json::to_vec(&request).map_err(|_| Error("serialization_failed"))?;
-    let output = run_fixed(
+    let output = run_helper(
         APT_WORKER,
         &[],
         Some(&input),
@@ -465,17 +481,36 @@ async fn apt_call(operation: &Operation, expected: Option<&CanonicalPlan>) -> Re
         },
     )
     .await?;
+    interpret_apt_response(&output.stdout, output.success, &request, expected.is_some())
+}
+
+pub fn interpret_apt_response(
+    output: &[u8],
+    successful_exit: bool,
+    request: &Value,
+    executing: bool,
+) -> Result<Value> {
     let response: Value =
-        serde_json::from_slice(&output).map_err(|_| Error("invalid_worker_response"))?;
+        serde_json::from_slice(output).map_err(|_| Error("invalid_worker_response"))?;
     if response.get("protocol_version").and_then(Value::as_str) != Some("1.0")
-        || response.get("status").and_then(Value::as_str) != Some("ok")
         || response.get("request_id") != request.get("request_id")
         || response.get("operation") != request.get("operation")
     {
         return Err(Error("package_worker_failed"));
     }
-
-    if expected.is_some() {
+    if response.get("status").and_then(Value::as_str) == Some("error") {
+        return Err(match response.pointer("/error/code").and_then(Value::as_str) {
+            Some("plan_digest_mismatch") => Error("state_changed_prepare_again"),
+            _ => Error("package_worker_failed"),
+        });
+    }
+    if !successful_exit
+        || response.get("status").and_then(Value::as_str) != Some("ok")
+        || !response.get("result").is_some_and(Value::is_object)
+    {
+        return Err(Error("invalid_worker_response"));
+    }
+    if executing {
         Ok(response)
     } else {
         let result = response.get("result").ok_or(Error("invalid_worker_plan"))?;
