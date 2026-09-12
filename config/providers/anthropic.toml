@@ -1,0 +1,32 @@
+schema_version = 1
+provider = "anthropic"
+display_name = "Anthropic API (bring your own API key)"
+enabled = false
+live_tested = false
+verification = "official_docs_and_offline_fixtures_only"
+
+[api]
+contract = "Anthropic Messages API; anthropic-version 2023-06-01"
+endpoint = "https://api.anthropic.com/v1/messages"
+endpoint_override_allowed = false
+model = ""
+model_validation = "syntax_only_no_remote_availability_claim"
+
+[authentication]
+kind = "provider_scoped_api_key"
+handoff = "inherited_fd_3_only"
+
+[capabilities]
+text_generation = true
+streaming = false
+tool_calls = false
+files = false
+server_state = false
+
+[billing]
+kind = "separately_billed_api_usage"
+consumer_subscription = "not_an_api_billing_entitlement"
+
+[cli]
+state = "conditional_not_enabled"
+reason = "Claude Code embedding remains conditional on explicit applicable terms and an authorized test proving every shell, file, network, and tool capability is off."

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "message": "vendor detail fixture-secret-never-emit",
+    "type": "invalid_request_error",
+    "code": "invalid_api_key"
+  }
+}

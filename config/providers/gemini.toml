@@ -1,0 +1,32 @@
+schema_version = 1
+provider = "gemini"
+display_name = "Gemini API (bring your own API key)"
+enabled = false
+live_tested = false
+verification = "official_docs_and_offline_fixtures_only"
+
+[api]
+contract = "Gemini generateContent v1beta; fully supported stateless API"
+endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{configured_model}:generateContent"
+endpoint_override_allowed = false
+model = ""
+model_validation = "syntax_only_no_remote_availability_claim"
+
+[authentication]
+kind = "provider_scoped_api_key"
+handoff = "inherited_fd_3_only"
+
+[capabilities]
+text_generation = true
+streaming = false
+tool_calls = false
+files = false
+server_state = false
+
+[billing]
+kind = "separately_billed_api_usage"
+consumer_subscription = "not_an_api_billing_entitlement"
+
+[cli]
+state = "not_eligible"
+reason = "Consumer OAuth and Antigravity consumer access are not used or extracted; only a separately issued Gemini API key is accepted."
