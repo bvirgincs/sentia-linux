@@ -12,10 +12,10 @@ name = "sentia-local-broker"
 path = "src/main.rs"
 
 [dependencies]
-libc = "0.2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+libc = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 sentia-protocol = { path = "../sentia-protocol" }
-thiserror = "1"
-tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
-tokio-util = { version = "0.7", features = ["rt"] }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }

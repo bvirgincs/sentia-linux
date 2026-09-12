@@ -14,13 +14,13 @@ name = "sentia-health"
 path = "src/main.rs"
 
 [dependencies]
-libc = "0.2"
-nix = { version = "0.29", default-features = false, features = ["fs"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+libc = { workspace = true }
+nix = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
-serde_json = "1.0"
+serde_json = { workspace = true }
 
 [[test]]
 name = "health-proc"

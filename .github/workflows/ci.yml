@@ -1,0 +1,56 @@
+name: Native contracts and unit tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.rs"
+      - "**/Cargo.toml"
+      - Cargo.lock
+      - build/release/**
+      - tests/release/**
+      - .github/workflows/ci.yml
+  pull_request:
+    paths:
+      - "**/*.rs"
+      - "**/Cargo.toml"
+      - Cargo.lock
+      - build/release/**
+      - tests/release/**
+      - .github/workflows/ci.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    container: debian:trixie-slim
+    timeout-minutes: 30
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Install Debian build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates git build-essential pkg-config \
+            cargo rustc rustfmt python3 \
+            libgtk-4-dev libvte-2.91-gtk4-dev \
+            libapt-pkg-dev libdbus-1-dev libssl-dev
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Check native formatting
+        run: cargo fmt --all -- --check
+      - name: Test native workspace
+        run: cargo test --workspace --locked
+      - name: Test release artifact integrity
+        run: python3 -m unittest discover -s tests/release -p 'test_*.py' -v
