@@ -31,6 +31,13 @@ use crate::tools::system::{
 use crate::{PrivacyClass, PrivilegeClass, ToolError, ToolResult};
 
 pub const READ_ONLY_PROTOCOL_VERSION: &str = "sentia.tools.readonly.v1";
+pub const PRIVILEGED_BROKER_BUS_NAME: &str = "org.sentia.System1";
+pub const PRIVILEGED_BROKER_OBJECT_PATH: &str = "/org/sentia/System1";
+pub const PRIVILEGED_BROKER_INTERFACE: &str = "org.sentia.System1";
+pub const PRIVILEGED_BROKER_PREPARE_METHOD: &str = "Prepare";
+pub const PRIVILEGED_BROKER_APPLY_METHOD: &str = "Apply";
+pub const PRIVILEGED_BROKER_PREPARE_SCHEMA_VERSION: u64 = 1;
+
 const PRIVILEGED_BROKER_METHOD_DENYLIST: &[&str] = &[
     "apply",
     "prepare",
@@ -39,6 +46,45 @@ const PRIVILEGED_BROKER_METHOD_DENYLIST: &[&str] = &[
     "org.sentia.system1.apply",
     "org.sentia.system1.prepare",
 ];
+
+pub fn privileged_broker_contract() -> Value {
+    json!({
+        "bus_name": PRIVILEGED_BROKER_BUS_NAME,
+        "object_path": PRIVILEGED_BROKER_OBJECT_PATH,
+        "interface": PRIVILEGED_BROKER_INTERFACE,
+        "prepare": {
+            "method": PRIVILEGED_BROKER_PREPARE_METHOD,
+            "input_schema": {
+                "type": "object",
+                "required": ["version", "operation"],
+                "additionalProperties": false,
+                "properties": {
+                    "version": { "type": "integer", "const": PRIVILEGED_BROKER_PREPARE_SCHEMA_VERSION },
+                    "operation": { "type": "object" }
+                }
+            },
+            "notes": [
+                "prepare builds canonical broker plan proposals only",
+                "no client-side approved field is supported"
+            ]
+        },
+        "apply": {
+            "method": PRIVILEGED_BROKER_APPLY_METHOD,
+            "input_schema": {
+                "type": "object",
+                "required": ["id", "digest"],
+                "additionalProperties": false,
+                "properties": {
+                    "id": { "type": "string", "minLength": 1 },
+                    "digest": { "type": "string", "minLength": 1 }
+                }
+            },
+            "requires_same_dbus_connection_as_prepare": true,
+            "trusted_ui_plaintext_preview_required": true,
+            "model_tool_registry_must_not_invoke": true
+        }
+    })
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolDescriptor {
@@ -343,9 +389,9 @@ pub fn tool_input_schema(tool_name: &str) -> Option<Value> {
 
 pub fn invoke_tool(tool_name: &str, input: Value) -> Result<ToolResult, ToolError> {
     if is_privileged_broker_method(tool_name) {
-        return Err(ToolError::permission_denied(
-            "privileged broker methods are not available in read-only registry; trusted UI must call org.sentia.System1 Prepare/Apply directly on one DBus connection"
-        ));
+        return Err(ToolError::permission_denied(format!(
+            "privileged broker methods are unavailable in read-only registry; use {PRIVILEGED_BROKER_BUS_NAME} {PRIVILEGED_BROKER_OBJECT_PATH} {PRIVILEGED_BROKER_INTERFACE} {PRIVILEGED_BROKER_PREPARE_METHOD}/{PRIVILEGED_BROKER_APPLY_METHOD} via trusted UI (same DBus connection from Prepare to Apply, no approved field)"
+        )));
     }
 
     match tool_name {
@@ -395,9 +441,20 @@ pub fn invoke_tool(tool_name: &str, input: Value) -> Result<ToolResult, ToolErro
 
 fn is_privileged_broker_method(tool_name: &str) -> bool {
     let normalized = tool_name.trim().to_ascii_lowercase();
-    PRIVILEGED_BROKER_METHOD_DENYLIST
+    if PRIVILEGED_BROKER_METHOD_DENYLIST
         .iter()
         .any(|candidate| normalized == *candidate)
+    {
+        return true;
+    }
+
+    let canonical = normalized
+        .replace("::", ".")
+        .replace('/', ".")
+        .replace(':', ".");
+
+    canonical.starts_with("org.sentia.system1.")
+        && (canonical.ends_with(".apply") || canonical.ends_with(".prepare"))
 }
 
 fn validate_protocol_version(version: &str) -> Result<(), ToolError> {

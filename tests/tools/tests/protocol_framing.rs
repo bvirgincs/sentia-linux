@@ -1,5 +1,8 @@
 use sentia_tools::protocol::{
-    handle_request, readonly_tool_names, ToolErrorCategory, ToolRequest, ToolResponse,
+    handle_request, privileged_broker_contract, readonly_tool_names, ToolErrorCategory,
+    ToolRequest, ToolResponse, PRIVILEGED_BROKER_APPLY_METHOD, PRIVILEGED_BROKER_BUS_NAME,
+    PRIVILEGED_BROKER_INTERFACE, PRIVILEGED_BROKER_OBJECT_PATH,
+    PRIVILEGED_BROKER_PREPARE_METHOD, PRIVILEGED_BROKER_PREPARE_SCHEMA_VERSION,
     READ_ONLY_PROTOCOL_VERSION,
 };
 
@@ -104,6 +107,70 @@ fn invoke_privileged_apply_is_rejected() {
         }
         other => panic!("unexpected response: {other:?}"),
     }
+}
+
+#[test]
+fn invoke_privileged_prepare_is_rejected() {
+    let response = handle_request(ToolRequest::Invoke {
+        protocol_version: READ_ONLY_PROTOCOL_VERSION.to_string(),
+        request_id: None,
+        call_id: "call-prepare".to_string(),
+        tool_name: "org.sentia.System1.Prepare".to_string(),
+        input: serde_json::json!({
+            "version": 1_u64,
+            "operation": { "operation": "service", "action": "restart", "unit": "ssh.service" }
+        }),
+    });
+
+    match response {
+        ToolResponse::Error { call_id, error, .. } => {
+            assert_eq!(call_id.as_deref(), Some("call-prepare"));
+            assert_eq!(error.category, ToolErrorCategory::PermissionDenied);
+            assert!(!error.retryable);
+            let error_text = serde_json::to_string(&error.error).expect("error serializes");
+            assert!(error_text.contains("same DBus connection"));
+            assert!(error_text.contains("no approved field"));
+        }
+        other => panic!("unexpected response: {other:?}"),
+    }
+}
+
+#[test]
+fn privileged_broker_contract_exposes_expected_constants() {
+    let contract = privileged_broker_contract();
+
+    assert_eq!(
+        contract["bus_name"].as_str(),
+        Some(PRIVILEGED_BROKER_BUS_NAME)
+    );
+    assert_eq!(
+        contract["object_path"].as_str(),
+        Some(PRIVILEGED_BROKER_OBJECT_PATH)
+    );
+    assert_eq!(
+        contract["interface"].as_str(),
+        Some(PRIVILEGED_BROKER_INTERFACE)
+    );
+    assert_eq!(
+        contract["prepare"]["method"].as_str(),
+        Some(PRIVILEGED_BROKER_PREPARE_METHOD)
+    );
+    assert_eq!(
+        contract["prepare"]["input_schema"]["properties"]["version"]["const"].as_u64(),
+        Some(PRIVILEGED_BROKER_PREPARE_SCHEMA_VERSION)
+    );
+    assert_eq!(
+        contract["apply"]["method"].as_str(),
+        Some(PRIVILEGED_BROKER_APPLY_METHOD)
+    );
+    assert_eq!(
+        contract["apply"]["requires_same_dbus_connection_as_prepare"].as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        contract["apply"]["model_tool_registry_must_not_invoke"].as_bool(),
+        Some(true)
+    );
 }
 
 #[test]

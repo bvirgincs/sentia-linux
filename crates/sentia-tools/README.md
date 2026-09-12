@@ -22,7 +22,8 @@ Security posture:
 - timeouts and output limits
 - explicit permission-denied/unavailable errors
 - command history is explicit-input only (never reads shell history files)
-- privileged broker methods (`org.sentia.System1` Prepare/Apply) are explicitly denied in this read-only registry
+- privileged broker methods (`org.sentia.System1` bus, `/org/sentia/System1` path, `org.sentia.System1` interface) are explicitly denied in this read-only registry
+- broker Apply is never model-invoked; trusted UI must preview/confirm and keep the same DBus connection from Prepare(version=1 plan proposal) to Apply(id,digest), with no `approved` field
 
 Router JSON framing (`sentia.tools.readonly.v1`):
 - `list`: returns read-only tool descriptors and JSON input schemas
