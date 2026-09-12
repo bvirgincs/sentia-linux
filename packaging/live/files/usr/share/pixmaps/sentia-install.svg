@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="88" fill="#1f4c73"/>
+  <path d="M128 196h256v40H128zm0 80h256v40H128z" fill="#d5e9fb"/>
+  <path d="M256 116l96 72h-64v72h-64v-72h-64z" fill="#ffffff"/>
+  <text x="256" y="430" text-anchor="middle" font-family="Sans" font-size="52" fill="#ffffff" font-weight="700">Install</text>
+</svg>

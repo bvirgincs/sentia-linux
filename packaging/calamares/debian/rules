@@ -1,0 +1,38 @@
+#!/usr/bin/make -f
+
+required_staged_config := \
+  debian/staged-config/calamares/settings.conf \
+  debian/staged-config/calamares/modules/partition.conf \
+  debian/staged-config/calamares/modules/bootloader.conf \
+  debian/staged-config/calamares/modules/unpackfs.conf \
+  debian/staged-config/calamares-modules/bootloader-config/module.desc \
+  debian/staged-config/calamares-modules/sources-final/module.desc \
+  debian/staged-config/helpers/calamares-bootloader-config \
+  debian/staged-config/helpers/calamares-cleanup-live \
+  debian/staged-config/helpers/calamares-sources-final \
+  debian/staged-config/COPYING
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	for file in $(required_staged_config); do \
+	  if [ ! -f "$$file" ]; then \
+	    echo "Missing staged config input: $$file" >&2; \
+	    exit 1; \
+	  fi; \
+	done
+
+override_dh_auto_install:
+	install -d debian/sentia-calamares-settings/etc/calamares
+	cp -a debian/staged-config/calamares/. debian/sentia-calamares-settings/etc/calamares/
+	install -d debian/sentia-calamares-settings/usr/lib/calamares/modules
+	cp -a debian/staged-config/calamares-modules/. debian/sentia-calamares-settings/usr/lib/calamares/modules/
+	install -d debian/sentia-calamares-settings/usr/share/calamares/helpers
+	cp -a debian/staged-config/helpers/. debian/sentia-calamares-settings/usr/share/calamares/helpers/
+	chmod 0755 debian/sentia-calamares-settings/usr/share/calamares/helpers/*
+	install -d debian/sentia-calamares-settings/usr/share/doc/sentia-calamares-settings
+	install -m 0644 debian/staged-config/COPYING debian/sentia-calamares-settings/usr/share/doc/sentia-calamares-settings/COPYING.upstream
+
+execute_after_dh_builddeb:
+	rm -rf debian/staged-config

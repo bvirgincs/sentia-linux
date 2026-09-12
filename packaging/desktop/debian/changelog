@@ -1,0 +1,13 @@
+sentia-desktop (0.1.0-2) unstable; urgency=medium
+
+  * Drop placeholder Sentia terminal/monitor desktop launchers and wrappers.
+  * Use isolated staged-config inputs in debian/rules.
+  * Update package homepage URL.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 19:15:00 +0000
+
+sentia-desktop (0.1.0-1) unstable; urgency=medium
+
+  * Initial minimal Sentia desktop metapackage and settings package.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 18:00:00 +0000

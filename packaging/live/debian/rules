@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -d debian/sentia-live
+	cp -a files/etc debian/sentia-live/
+	cp -a files/usr debian/sentia-live/
+	chmod 0755 debian/sentia-live/usr/bin/sentia-install-calamares
+	chmod 0755 debian/sentia-live/usr/libexec/sentia-live/add-installer-desktop-icon
+	chmod 0755 debian/sentia-live/usr/libexec/sentia-live/run-calamares-root

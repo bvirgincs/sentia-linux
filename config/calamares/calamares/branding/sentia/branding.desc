@@ -1,0 +1,39 @@
+---
+componentName: sentia
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 900px,620px
+windowPlacement: center
+
+strings:
+  productName: Sentia Linux
+  shortProductName: Sentia
+  version: "0.1"
+  shortVersion: "0.1"
+  versionedName: Sentia Linux 0.1
+  shortVersionedName: Sentia 0.1
+  bootloaderEntryName: Debian
+  productUrl: https://github.com/sentia-linux
+  supportUrl: https://www.debian.org/support
+  knownIssuesUrl: https://github.com/sentia-linux/sentia-linux/issues
+  releaseNotesUrl: https://github.com/sentia-linux/sentia-linux
+  donateUrl: https://www.debian.org
+
+sidebar: widget
+navigation: widget
+
+images:
+  productLogo: sentia-logo.svg
+  productIcon: sentia-logo.svg
+  productWelcome: sentia-logo.svg
+
+slideshow: show.qml
+
+style:
+  SidebarBackground: "#1b3954"
+  SidebarText: "#FFFFFF"
+  SidebarTextCurrent: "#fbfbfb"
+  SidebarBackgroundCurrent: "#265370"
+
+slideshowAPI: 2

@@ -1,0 +1,19 @@
+# Minimal Sentia desktop baseline for Debian 13 (Trixie)
+# Deliberately avoids full xfce task / recommends bundles.
+chromium
+lightdm
+lightdm-gtk-greeter
+network-manager
+network-manager-gnome
+policykit-1-gnome
+pulseaudio | pipewire-audio
+pavucontrol
+thunar
+xfce4-notifyd
+xfce4-panel
+xfce4-pulseaudio-plugin
+xfce4-session
+xfce4-settings
+xfce4-terminal
+xfdesktop4
+xfwm4

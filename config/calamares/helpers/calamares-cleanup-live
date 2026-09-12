@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+CHROOT="$(awk '$2 ~ /calamares/ && $2 ~ /\/proc$/ {sub(/\/proc$/, "", $2); print $2; exit}' /proc/mounts)"
+if [ -z "$CHROOT" ]; then
+    echo "Unable to determine Calamares target mount point" >&2
+    exit 1
+fi
+
+for live_user in user live; do
+    if chroot "$CHROOT" id -u "$live_user" >/dev/null 2>&1; then
+        chroot "$CHROOT" userdel --remove "$live_user"
+    fi
+done
+
+rm -f "$CHROOT/etc/apt/sources.list.d/debian-live-media.list" \
+      "$CHROOT/etc/apt/sources.list.d/sentia-live-media.sources"
+
+rm -f "$CHROOT/etc/machine-id" "$CHROOT/var/lib/dbus/machine-id"
+: > "$CHROOT/etc/machine-id"
+ln -sf /etc/machine-id "$CHROOT/var/lib/dbus/machine-id"
+rm -f "$CHROOT/var/lib/systemd/random-seed" "$CHROOT/var/lib/urandom/random-seed"
+
+rm -rf "$CHROOT/etc/live" "$CHROOT/lib/live" "$CHROOT/usr/lib/live" "$CHROOT/var/lib/live"
+rm -f "$CHROOT/etc/xdg/autostart/sentia-live-installer.desktop"
+rm -f "$CHROOT/etc/systemd/system/sysinit.target.wants/calamaresfb.service"

@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+CHROOT="$(awk '$2 ~ /calamares/ && $2 ~ /\/proc$/ {sub(/\/proc$/, "", $2); print $2; exit}' /proc/mounts)"
+if [ -z "$CHROOT" ]; then
+    echo "Unable to determine Calamares target mount point" >&2
+    exit 1
+fi
+
+if [ ! -d /sys/firmware/efi/efivars ]; then
+    echo "Sentia installation requires UEFI boot mode; BIOS install is unsupported." >&2
+    exit 1
+fi
+
+if awk -v target="$CHROOT" '$2 == target && $1 ~ /^\/dev\/mapper\/luks/ { found=1 } END { exit(found ? 0 : 1) }' /proc/mounts; then
+    echo "UMASK=0077" > "$CHROOT/etc/initramfs-tools/conf.d/initramfs-permissions"
+fi
+
+if ! chroot "$CHROOT" dpkg-query -W shim-signed grub-efi-amd64-signed >/dev/null 2>&1; then
+    echo "Missing required signed boot packages (shim-signed, grub-efi-amd64-signed) in target filesystem." >&2
+    exit 1
+fi
+
+if [ -x "$CHROOT/usr/sbin/update-grub" ]; then
+    chroot "$CHROOT" /usr/sbin/update-grub
+else
+    echo "Missing update-grub in target filesystem." >&2
+    exit 1
+fi

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#11263b"/>
+      <stop offset="100%" stop-color="#274d73"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <circle cx="1640" cy="220" r="180" fill="#3f7fb3" fill-opacity="0.22"/>
+  <circle cx="280" cy="920" r="220" fill="#67a6d9" fill-opacity="0.18"/>
+  <text x="140" y="920" fill="#f5f9ff" font-family="Sans" font-size="96" font-weight="700">Sentia Linux</text>
+  <text x="145" y="975" fill="#d8e9fa" font-family="Sans" font-size="34">Debian 13 Trixie base · minimal desktop</text>
+</svg>

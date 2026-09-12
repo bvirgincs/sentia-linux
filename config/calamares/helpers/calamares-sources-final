@@ -1,0 +1,52 @@
+#!/bin/sh
+set -eu
+
+CHROOT="$(awk '$2 ~ /calamares/ && $2 ~ /\/proc$/ {sub(/\/proc$/, "", $2); print $2; exit}' /proc/mounts)"
+if [ -z "$CHROOT" ]; then
+    echo "Unable to determine Calamares target mount point" >&2
+    exit 1
+fi
+
+require_path() {
+    if [ ! -e "$CHROOT$1" ]; then
+        echo "Missing required installer output: $1" >&2
+        exit 1
+    fi
+}
+
+require_contains() {
+    file="$1"
+    pattern="$2"
+    if ! grep -Eq "$pattern" "$CHROOT$file"; then
+        echo "Invalid source config in $file (missing pattern: $pattern)" >&2
+        exit 1
+    fi
+}
+
+rm -f "$CHROOT/etc/apt/sources.list.d/debian-live-media.list" \
+      "$CHROOT/etc/apt/sources.list.d/sentia-live-media.sources"
+
+if [ -f "$CHROOT/etc/apt/sources.list" ]; then
+    if grep -Eq 'run/live/medium|run/initramfs/live' "$CHROOT/etc/apt/sources.list"; then
+        echo "Live media APT references remain in /etc/apt/sources.list" >&2
+        exit 1
+    fi
+fi
+
+require_path /usr/share/keyrings/sentia-archive-keyring.gpg
+if [ ! -f "$CHROOT/usr/share/sentia/archive/dists/sentia-0.1/InRelease" ] && [ ! -f "$CHROOT/usr/share/sentia/archive/dists/sentia-0.1/Release" ]; then
+    echo "Missing Sentia archive metadata under /usr/share/sentia/archive/dists/sentia-0.1" >&2
+    exit 1
+fi
+
+require_path /etc/apt/sources.list.d/debian.sources
+require_path /etc/apt/sources.list.d/sentia.sources
+
+require_contains /etc/apt/sources.list.d/debian.sources '^Suites: trixie trixie-updates$'
+require_contains /etc/apt/sources.list.d/debian.sources '^Suites: trixie-security$'
+require_contains /etc/apt/sources.list.d/debian.sources '^Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg$'
+
+require_contains /etc/apt/sources.list.d/sentia.sources '^URIs: file:/usr/share/sentia/archive$'
+require_contains /etc/apt/sources.list.d/sentia.sources '^Suites: sentia-0.1$'
+require_contains /etc/apt/sources.list.d/sentia.sources '^Signed-By: /usr/share/keyrings/sentia-archive-keyring.gpg$'
+require_contains /etc/apt/sources.list.d/sentia.sources '^Enabled: yes$'

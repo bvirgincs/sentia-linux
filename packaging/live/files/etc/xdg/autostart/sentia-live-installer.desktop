@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Add Sentia installer icon
+Exec=/usr/libexec/sentia-live/add-installer-desktop-icon
+StartupNotify=false
+NoDisplay=true
+X-GNOME-Autostart-Phase=Initialization
+X-KDE-autostart-phase=1

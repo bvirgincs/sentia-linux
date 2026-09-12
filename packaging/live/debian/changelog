@@ -1,0 +1,13 @@
+sentia-live (0.1.0-2) unstable; urgency=medium
+
+  * Fix run-calamares-root fstab restoration on success and failure.
+  * Add test coverage for fstab restoration behavior.
+  * Update package homepage URL.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 19:15:00 +0000
+
+sentia-live (0.1.0-1) unstable; urgency=medium
+
+  * Initial live-session integration package and installer launcher.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 18:00:00 +0000

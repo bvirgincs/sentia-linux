@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+CHROOT="$(awk '$2 ~ /calamares/ && $2 ~ /\/proc$/ {sub(/\/proc$/, "", $2); print $2; exit}' /proc/mounts)"
+if [ -z "$CHROOT" ]; then
+    echo "Unable to determine Calamares target mount point" >&2
+    exit 1
+fi
+
+if [ "${1:-}" = "-u" ]; then
+    rm -f "$CHROOT/etc/dpkg/dpkg.cfg.d/calamares-force-unsafe-io"
+    sync
+    exit 0
+fi
+
+echo "force-unsafe-io" > "$CHROOT/etc/dpkg/dpkg.cfg.d/calamares-force-unsafe-io"

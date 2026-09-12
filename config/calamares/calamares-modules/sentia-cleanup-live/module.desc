@@ -1,0 +1,6 @@
+---
+type: "job"
+name: "sentia-cleanup-live"
+interface: "process"
+command: "/usr/share/calamares/helpers/calamares-cleanup-live"
+timeout: 600

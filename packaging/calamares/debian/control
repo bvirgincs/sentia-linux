@@ -1,0 +1,31 @@
+Source: sentia-calamares-settings
+Section: utils
+Priority: optional
+Maintainer: Sentia Developers <sentia-devel@invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/bvirgincs/sentia-linux
+
+Package: sentia-calamares-settings
+Architecture: all
+Depends:
+ calamares,
+ cryptsetup,
+ cryptsetup-initramfs,
+ grub-efi-amd64-signed,
+ keyutils,
+ libglib2.0-bin,
+ pkexec,
+ qml-module-qtquick-window2,
+ qml-module-qtquick2,
+ rsync,
+ sentia-archive-keyring,
+ sentia-repository-config,
+ shim-signed,
+ ${misc:Depends}
+Description: Sentia branding and installer modules for Calamares
+ Calamares settings and helper scripts for Sentia live media.
+ The configuration starts from Debian trixie Calamares behavior while
+ enforcing Signed-By repository handling, GPT+UEFI defaults, ext4+ESP,
+ swapfile baseline, and cleanup of live-only install artifacts.
