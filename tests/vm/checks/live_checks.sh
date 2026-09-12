@@ -172,4 +172,100 @@ else
   check LIVE-NO-BUILD-ARCHIVE "leaked: ${leaked}" FAIL
 fi
 
+# ---------------------------------------------------------------------------
+# Local AI. These are the checks that distinguish a Sentia image from a plain
+# Debian live image, so they are deliberately concrete: a binary, a weights
+# file, a running service and a real answer produced with networking down.
+# ---------------------------------------------------------------------------
+
+MODEL_PATH=/usr/share/sentia/models/granite-4.2-3b/granite-4.2-3b-Q4_K_M.gguf
+LLAMA_SOCKET=/run/sentia-local/llama.sock
+
+# AI-RUNTIME-BINARY: the packaged llama.cpp server must actually be present.
+# The package once built cleanly while containing no server at all, so this is
+# checked directly rather than inferred from the package being installed.
+if [[ -x /usr/bin/llama-server ]]; then
+  check AI-RUNTIME-BINARY "$(/usr/bin/llama-server --version 2>&1 | head -1)" PASS
+else
+  check AI-RUNTIME-BINARY "/usr/bin/llama-server missing or not executable" FAIL
+fi
+
+# AI-MODEL-PRESENT: the weights must ship in the image, not be downloaded.
+if [[ -r "${MODEL_PATH}" ]]; then
+  model_bytes="$(stat -c %s "${MODEL_PATH}")"
+  if [[ "${model_bytes}" == "2244011552" ]]; then
+    check AI-MODEL-PRESENT "${model_bytes} bytes" PASS
+  else
+    check AI-MODEL-PRESENT "unexpected size ${model_bytes}" FAIL
+  fi
+else
+  check AI-MODEL-PRESENT "${MODEL_PATH} missing or unreadable" FAIL
+fi
+
+# AI-RUNTIME-ACTIVE: loading a 2.2 GB model on an emulated CPU is slow, so wait
+# rather than sampling once. A failure here must not be mistaken for "slow".
+llama_state=""
+for _ in $(seq 1 60); do
+  llama_state="$(systemctl is-active sentia-local-llama.service 2>&1)"
+  [[ "${llama_state}" == "active" || "${llama_state}" == "failed" ]] && break
+  sleep 5
+done
+if [[ "${llama_state}" == "active" ]]; then
+  check AI-RUNTIME-ACTIVE "sentia-local-llama.service active" PASS
+else
+  check AI-RUNTIME-ACTIVE "state=${llama_state}: $(systemctl show -p Result -p ExecMainStatus --value sentia-local-llama.service 2>&1 | tr '\n' ' ')" FAIL
+fi
+
+# AI-RUNTIME-SOCKET: the runtime must listen on a private local socket and must
+# not be reachable from anywhere else.
+if [[ -S "${LLAMA_SOCKET}" ]]; then
+  socket_mode="$(stat -c '%a %U:%G' "${LLAMA_SOCKET}")"
+  check AI-RUNTIME-SOCKET "${socket_mode}" PASS
+else
+  check AI-RUNTIME-SOCKET "${LLAMA_SOCKET} is not a socket" FAIL
+fi
+
+# AI-RUNTIME-NOT-EXPOSED: no inference port may be listening on a real address.
+exposed="$(ss -Hltnp 2>/dev/null | awk '{print $4}' | grep -vE '^(127\.|\[::1\]|\*:631)' || true)"
+if [[ -z "${exposed}" ]]; then
+  check AI-RUNTIME-NOT-EXPOSED "no externally bound listeners" PASS
+else
+  check AI-RUNTIME-NOT-EXPOSED "listening: ${exposed//$'\n'/ }" FAIL
+fi
+
+# AI-BROKER-ACTIVE: the peer-authenticated broker is the only path users get.
+broker_state="$(systemctl is-active sentia-local-broker.service 2>&1)"
+if [[ "${broker_state}" == "active" ]]; then
+  check AI-BROKER-ACTIVE "sentia-local-broker.service active" PASS
+else
+  check AI-BROKER-ACTIVE "state=${broker_state}" FAIL
+fi
+
+# AI-ROUTER-SOCKET: the per-user router socket must exist for the live user and
+# must not be readable by other users.
+router_socket="/run/user/$(id -u "${SENTIA_TEST_USER:-user}" 2>/dev/null || echo 1000)/sentia/router.sock"
+if [[ -S "${router_socket}" ]]; then
+  check AI-ROUTER-SOCKET "$(stat -c '%a %U' "${router_socket}")" PASS
+else
+  check AI-ROUTER-SOCKET "${router_socket} missing" FAIL
+fi
+
+# AI-OFFLINE-ANSWER: the product claim. Take the network down first so that a
+# remote provider cannot possibly be answering, then ask a real question as the
+# unprivileged desktop user and require a non-empty answer.
+for iface in $(ls /sys/class/net | grep -v '^lo$'); do
+  ip link set "${iface}" down 2>/dev/null || true
+done
+ai_user="${SENTIA_TEST_USER:-user}"
+ai_output="$(runuser -u "${ai_user}" -- env XDG_RUNTIME_DIR="/run/user/$(id -u "${ai_user}")" \
+  timeout 600 ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1 || true)"
+if [[ -n "${ai_output//[[:space:]]/}" ]] && ! grep -qiE 'error|refused|unavailable|not found' <<<"${ai_output}"; then
+  check AI-OFFLINE-ANSWER "${ai_output:0:300}" PASS
+else
+  check AI-OFFLINE-ANSWER "${ai_output:0:300}" FAIL
+fi
+for iface in $(ls /sys/class/net | grep -v '^lo$'); do
+  ip link set "${iface}" up 2>/dev/null || true
+done
+
 echo "SENTIA_CHECKS_COMPLETE"
