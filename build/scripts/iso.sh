@@ -109,8 +109,8 @@ require_file "${live_packages}"
 missing_packages=()
 for package_list in "${LIVEBUILD_PACKAGE_LIST_DIR}"/*.list.chroot; do
   while IFS= read -r requested_package; do
-    grep -q "^${requested_package} " "${live_packages}" ||
-      missing_packages+=("${requested_package}")
+    awk -v package="${requested_package}" '$1 == package { found = 1 } END { exit !found }' \
+      "${live_packages}" || missing_packages+=("${requested_package}")
   done < <(read_manifest_packages "${package_list}")
 done
 if [[ "${#missing_packages[@]}" -gt 0 ]]; then
