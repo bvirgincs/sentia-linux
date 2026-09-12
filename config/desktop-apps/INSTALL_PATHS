@@ -1,0 +1,14 @@
+# Sentia desktop-apps packaging contract (owned by work/applications)
+# Format: <source-relative-path> -> <install-relative-path>
+
+sentia-terminal.desktop -> usr/share/applications/sentia-terminal.desktop
+sentia-system-monitor.desktop -> usr/share/applications/sentia-system-monitor.desktop
+sentia-firstboot.desktop -> usr/share/applications/sentia-firstboot.desktop
+
+icons/sentia-terminal.svg -> usr/share/icons/hicolor/scalable/apps/sentia-terminal.svg
+icons/sentia-monitor.svg -> usr/share/icons/hicolor/scalable/apps/sentia-monitor.svg
+icons/sentia-firstboot.svg -> usr/share/icons/hicolor/scalable/apps/sentia-firstboot.svg
+
+# Desktop installer launcher remains owned by sentia-live packaging (sentia-install.desktop).
+# Packaging may wrap Exec= entries via /usr/libexec/sentia-desktop launchers if needed,
+# but should preserve these desktop IDs and user-visible Names.
