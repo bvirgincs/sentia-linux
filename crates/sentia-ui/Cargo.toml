@@ -1,0 +1,21 @@
+[package]
+name = "sentia-ui"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Native GTK4/VTE Sentia desktop applications"
+
+[features]
+default = ["native-ui"]
+native-ui = ["dep:glib", "dep:gtk4", "dep:vte4"]
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "=4.4.18", features = ["derive"] }
+libc = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+glib = { version = "0.17", optional = true }
+gtk4 = { version = "0.6.6", optional = true }
+vte4 = { version = "0.6.0", optional = true }

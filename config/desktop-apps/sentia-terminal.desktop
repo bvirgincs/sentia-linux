@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sentia Terminal
+Comment=Conventional Bash terminal with optional Sentia assistance
+Exec=sentia-terminal
+Icon=sentia-terminal
+Terminal=false
+Categories=System;TerminalEmulator;
+StartupNotify=true

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sentia First Boot
+Comment=Optional offline Sentia setup wizard
+Exec=sentia-firstboot
+Icon=sentia-firstboot
+Terminal=false
+Categories=Settings;
+StartupNotify=true
