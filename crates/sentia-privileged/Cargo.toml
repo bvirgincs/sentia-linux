@@ -1,0 +1,24 @@
+[package]
+name = "sentia-privileged"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+description = "Narrow, polkit-authorized Sentia system service"
+
+[dependencies]
+libc = "0.2"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "time", "sync", "signal"] }
+zbus = { version = "4.4", default-features = false, features = ["tokio"] }
+
+[[test]]
+name = "boundary"
+path = "../../tests/privileged/boundary.rs"
+
+[[test]]
+name = "isolated_bus"
+path = "../../tests/privileged/isolated_bus.rs"

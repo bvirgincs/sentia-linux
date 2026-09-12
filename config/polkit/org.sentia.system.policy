@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Sentia Linux</vendor>
+  <vendor_url>https://github.com/bvirgincs/sentia-linux</vendor_url>
+  <action id="org.sentia.system.service-start">
+    <description>Start a system service</description>
+    <message>Authentication is required to start the system service in the Sentia preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.service-stop">
+    <description>Stop a system service</description>
+    <message>Authentication is required to stop the system service in the Sentia preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.service-restart">
+    <description>Restart a system service</description>
+    <message>Authentication is required to restart the system service in the Sentia preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.service-enable">
+    <description>Enable a system service at boot</description>
+    <message>Authentication is required to enable the system service in the Sentia preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.process-terminate">
+    <description>Request termination of one process</description>
+    <message>Authentication is required to send SIGTERM to the process in the Sentia preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.package-install">
+    <description>Install system packages</description>
+    <message>Authentication is required to install the packages in the Sentia transaction preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.package-remove">
+    <description>Remove system packages</description>
+    <message>Authentication is required to remove the packages in the Sentia transaction preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.package-update">
+    <description>Refresh system package metadata</description>
+    <message>Authentication is required to refresh the system package metadata shown in Sentia.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+  <action id="org.sentia.system.package-upgrade">
+    <description>Upgrade system packages</description>
+    <message>Authentication is required to upgrade the packages in the Sentia transaction preview.</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>auth_admin</allow_active></defaults>
+  </action>
+</policyconfig>

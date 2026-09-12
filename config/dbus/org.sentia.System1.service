@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.sentia.System1
+Exec=/usr/libexec/sentia/sentia-privileged
+User=root
+SystemdService=sentia-privileged.service
