@@ -16,6 +16,8 @@ lb config noauto \
   --security true \
   --updates true \
   --checksums sha256 \
+  --chroot-squashfs-compression-type zstd \
+  --chroot-squashfs-compression-level 15 \
   --hostname sentia \
   --iso-application "Sentia Linux" \
   --iso-publisher "Sentia Linux" \
