@@ -1,0 +1,56 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND = -O2
+export DEB_CXXFLAGS_MAINT_APPEND = -O2
+
+BACKEND_DIR = /usr/lib/$(DEB_HOST_MULTIARCH)/sentia-llama-cpp/backends
+
+%:
+	dh $@ --buildsystem=cmake+ninja
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+	 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	 -DBUILD_SHARED_LIBS=ON \
+	 -DGGML_BACKEND_DL=ON \
+	 -DGGML_BACKEND_DIR=$(BACKEND_DIR) \
+	 -DGGML_CPU=ON \
+	 -DGGML_CPU_ALL_VARIANTS=ON \
+	 -DGGML_NATIVE=OFF \
+	 -DGGML_BLAS=OFF \
+	 -DGGML_ACCELERATE=OFF \
+	 -DGGML_CUDA=OFF \
+	 -DGGML_HIP=OFF \
+	 -DGGML_METAL=OFF \
+	 -DGGML_MUSA=OFF \
+	 -DGGML_OPENCL=OFF \
+	 -DGGML_RPC=OFF \
+	 -DGGML_SYCL=OFF \
+	 -DGGML_VULKAN=OFF \
+	 -DGGML_WEBGPU=OFF \
+	 -DGGML_ZDNN=OFF \
+	 -DGGML_ZENDNN=OFF \
+	 -DGGML_ET=OFF \
+	 -DLLAMA_BUILD_TESTS=OFF \
+	 -DLLAMA_BUILD_EXAMPLES=OFF \
+	 -DLLAMA_BUILD_TOOLS=OFF \
+	 -DLLAMA_BUILD_APP=OFF \
+	 -DLLAMA_BUILD_SERVER=ON \
+	 -DLLAMA_BUILD_UI=OFF \
+	 -DLLAMA_USE_PREBUILT_UI=OFF \
+	 -DLLAMA_OPENSSL=OFF \
+	 -DLLAMA_SUBPROCESS=OFF \
+	 -DLLAMA_LLGUIDANCE=OFF \
+	 -DLLAMA_TOOLS_INSTALL=OFF \
+	 -DLLAMA_TESTS_INSTALL=OFF
+
+override_dh_auto_build:
+	dh_auto_build -- -j2
+
+override_dh_auto_install:
+	dh_auto_install
+	install -D -m 0644 config/llama/sentia-local.env debian/tmp/etc/sentia/llama/sentia-local.env
+	install -D -m 0644 config/systemd/sentia-local-llama.service debian/tmp/lib/systemd/system/sentia-local-llama.service
+	install -D -m 0644 config/systemd/sentia-local-llama-readiness.service debian/tmp/lib/systemd/system/sentia-local-llama-readiness.service
+	install -D -m 0755 build/runtime/probe_llama_runtime.py debian/tmp/usr/lib/sentia/runtime/probe_llama_runtime.py

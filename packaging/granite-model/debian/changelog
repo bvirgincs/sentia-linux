@@ -1,0 +1,6 @@
+sentia-granite-model (4.2.3b+rev.c40945d7-1) unstable; urgency=medium
+
+  * Package pinned Granite 4.2 3B GGUF payload and provenance metadata.
+  * Verify exact byte size and SHA-256 before package assembly.
+
+ -- Sentia Maintainers <maintainers@sentia.local>  Sat, 12 Sep 2026 00:00:00 +0000

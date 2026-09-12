@@ -1,0 +1,4 @@
+config/llama/sentia-local.env etc/sentia/llama/
+config/systemd/sentia-local-llama.service lib/systemd/system/
+config/systemd/sentia-local-llama-readiness.service lib/systemd/system/
+build/runtime/probe_llama_runtime.py usr/lib/sentia/runtime/

@@ -1,0 +1,20 @@
+Source: sentia-granite-model
+Section: misc
+Priority: optional
+Maintainer: Sentia Maintainers <maintainers@sentia.local>
+Build-Depends:
+ debhelper-compat (= 13),
+ python3
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://huggingface.co/ibm-granite/granite-4.2-3b-GGUF
+
+Package: sentia-granite-model
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: Pinned IBM Granite 4.2 3B GGUF payload for Sentia
+ Exact local model payload for Sentia offline inference.
+ .
+ Includes model card, signature bundle, and provenance report. The signature
+ bundle is shipped for verification workflows but is not itself treated as
+ proof until validated by the official verification procedure.
