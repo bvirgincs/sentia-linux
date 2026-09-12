@@ -1,0 +1,38 @@
+[Unit]
+Description=Sentia health metrics daemon
+Documentation=man:sentia-health(1)
+After=basic.target
+ConditionPathExists=/proc/stat
+
+[Service]
+Type=simple
+DynamicUser=yes
+RuntimeDirectory=sentia
+RuntimeDirectoryMode=0750
+ExecStart=/usr/bin/sentia-health --daemon --socket-path /run/sentia/health.sock
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectClock=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+ReadWritePaths=/run/sentia
+ReadOnlyPaths=/proc /sys
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
