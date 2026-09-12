@@ -31,6 +31,14 @@ use crate::tools::system::{
 use crate::{PrivacyClass, PrivilegeClass, ToolError, ToolResult};
 
 pub const READ_ONLY_PROTOCOL_VERSION: &str = "sentia.tools.readonly.v1";
+const PRIVILEGED_BROKER_METHOD_DENYLIST: &[&str] = &[
+    "apply",
+    "prepare",
+    "broker_apply",
+    "broker_prepare",
+    "org.sentia.system1.apply",
+    "org.sentia.system1.prepare",
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolDescriptor {
@@ -334,6 +342,12 @@ pub fn tool_input_schema(tool_name: &str) -> Option<Value> {
 }
 
 pub fn invoke_tool(tool_name: &str, input: Value) -> Result<ToolResult, ToolError> {
+    if is_privileged_broker_method(tool_name) {
+        return Err(ToolError::permission_denied(
+            "privileged broker methods are not available in read-only registry; trusted UI must call org.sentia.System1 Prepare/Apply directly on one DBus connection"
+        ));
+    }
+
     match tool_name {
         "command_exists" => command_exists(parse_input::<CommandExistsInput>(tool_name, input)?),
         "command_lookup" => command_lookup(parse_input::<CommandLookupInput>(tool_name, input)?),
@@ -377,6 +391,13 @@ pub fn invoke_tool(tool_name: &str, input: Value) -> Result<ToolResult, ToolErro
             "unknown read-only tool: {tool_name}"
         ))),
     }
+}
+
+fn is_privileged_broker_method(tool_name: &str) -> bool {
+    let normalized = tool_name.trim().to_ascii_lowercase();
+    PRIVILEGED_BROKER_METHOD_DENYLIST
+        .iter()
+        .any(|candidate| normalized == *candidate)
 }
 
 fn validate_protocol_version(version: &str) -> Result<(), ToolError> {

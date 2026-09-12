@@ -84,6 +84,29 @@ fn invoke_unknown_tool_returns_not_found_error() {
 }
 
 #[test]
+fn invoke_privileged_apply_is_rejected() {
+    let response = handle_request(ToolRequest::Invoke {
+        protocol_version: READ_ONLY_PROTOCOL_VERSION.to_string(),
+        request_id: None,
+        call_id: "call-apply".to_string(),
+        tool_name: "org.sentia.System1.Apply".to_string(),
+        input: serde_json::json!({
+            "plan_id": "abc",
+            "digest": "def"
+        }),
+    });
+
+    match response {
+        ToolResponse::Error { call_id, error, .. } => {
+            assert_eq!(call_id.as_deref(), Some("call-apply"));
+            assert_eq!(error.category, ToolErrorCategory::PermissionDenied);
+            assert!(!error.retryable);
+        }
+        other => panic!("unexpected response: {other:?}"),
+    }
+}
+
+#[test]
 fn cancel_form_is_explicitly_not_supported_in_flight() {
     let response = handle_request(ToolRequest::Cancel {
         protocol_version: READ_ONLY_PROTOCOL_VERSION.to_string(),
