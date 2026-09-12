@@ -81,34 +81,6 @@ impl FirstBootConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CanonicalPrivilegedPlan {
-    pub title: String,
-    pub steps: Vec<String>,
-    pub typed_confirmation: String,
-}
-
-impl CanonicalPrivilegedPlan {
-    pub fn for_action(title: impl Into<String>, steps: Vec<String>) -> Self {
-        let title = title.into();
-        let normalized = title
-            .chars()
-            .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
-            .collect::<String>()
-            .to_ascii_uppercase();
-
-        Self {
-            title,
-            steps,
-            typed_confirmation: format!("APPLY_{normalized}"),
-        }
-    }
-
-    pub fn is_confirmation_valid(&self, typed: &str) -> bool {
-        typed.trim() == self.typed_confirmation
-    }
-}
-
 pub fn default_config_path() -> PathBuf {
     if let Some(path) = env::var_os("SENTIA_FIRSTBOOT_CONFIG") {
         return PathBuf::from(path);

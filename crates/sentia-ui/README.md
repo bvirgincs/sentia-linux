@@ -32,6 +32,14 @@ Transport constants currently used by UI:
 - router socket: `$XDG_RUNTIME_DIR/sentia/router.sock` (`SENTIA_ROUTER_SOCKET` override)
 - health socket: `/run/sentia-health/metrics.sock` (`SENTIA_HEALTH_SOCKET` override)
 
+Privileged broker integration target:
+- system bus name: `org.sentia.System1`
+- object path: `/org/sentia/System1`
+- interface: `org.sentia.System1`
+- methods: `Prepare(request_json)` -> plan preview, then `Apply(plan_id, digest)`
+- client requirement: same D-Bus connection must be reused from Prepare to Apply
+- UI rule: explicit user preview/confirm before Apply; model/tool registry must not expose Apply
+
 Note: protocol/core envelopes are provisional in this crate and should be
 replaced by shared contract/client crates owned by the contracts/router agents.
 

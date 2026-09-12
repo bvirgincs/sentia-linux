@@ -144,7 +144,7 @@ fn build_ui(application: &gtk::Application, cli: Cli) {
     }
 
     let privileged_notice = gtk::Label::new(Some(
-        "Privileged actions are intentionally absent here; any future root mutation must show a canonical plan and require typed confirmation via the broker before polkit.",
+        "Privileged actions are intentionally absent here. Trusted UI flows must call org.sentia.System1 Prepare for plan preview, then Apply(plan_id,digest) on the same D-Bus connection after explicit user confirmation; Apply is never model/tool-callable.",
     ));
     privileged_notice.set_wrap(true);
     privileged_notice.set_xalign(0.0);
