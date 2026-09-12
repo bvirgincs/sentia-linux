@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 WORKER_CPP = ROOT / "native" / "sentia-apt" / "src" / "apt_worker.cpp"
 MAIN_CPP = ROOT / "native" / "sentia-apt" / "src" / "main.cpp"
+CMAKE_FILE = ROOT / "native" / "sentia-apt" / "CMakeLists.txt"
 
 
 class WorkerSourceGuardTests(unittest.TestCase):
@@ -34,6 +35,12 @@ class WorkerSourceGuardTests(unittest.TestCase):
         self.assertIn("kMaxRequestBytes", source)
         self.assertIn("request_too_large", source)
         self.assertIn("ReadBoundedStdin", source)
+
+    def test_install_compat_symlink_path(self) -> None:
+        source = CMAKE_FILE.read_text(encoding="utf-8")
+        self.assertIn("create_symlink", source)
+        self.assertIn("sentia-apt-worker", source)
+        self.assertIn("/sentia-apt", source)
 
 
 if __name__ == "__main__":

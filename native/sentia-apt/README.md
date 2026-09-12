@@ -26,6 +26,10 @@ The broker-invoked binary path is fixed:
 
 - `/usr/libexec/sentia/sentia-apt-worker`
 
+Compatibility path is also installed as a symlink:
+
+- `/usr/libexec/sentia/sentia-apt` -> `sentia-apt-worker`
+
 ## Build
 
 ```bash

@@ -46,6 +46,15 @@ else()
 endif()
 
 install(TARGETS sentia-apt-worker RUNTIME DESTINATION libexec/sentia)
+install(CODE [[
+  set(_sentia_libexec "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/libexec/sentia")
+  file(MAKE_DIRECTORY "${_sentia_libexec}")
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E create_symlink
+            sentia-apt-worker
+            "${_sentia_libexec}/sentia-apt"
+  )
+]])
 install(
   FILES
     protocol/request.schema.json
