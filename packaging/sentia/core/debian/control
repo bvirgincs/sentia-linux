@@ -1,0 +1,39 @@
+Source: sentia-core
+Section: metapackages
+Priority: optional
+Maintainer: Sentia Packaging Team <packaging@sentia.invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: sentia-release
+Architecture: all
+Depends: ${misc:Depends}
+Description: Sentia release identity metadata
+ Sentia release metadata shared by core metapackages.
+
+Package: sentia-base
+Architecture: all
+Depends: ${misc:Depends}, sentia-release (= ${binary:Version}), sentia-archive-keyring, sentia-repository-config, base-files (>= 13.8)
+Description: Sentia base metapackage
+ Minimal Sentia base integration package.
+
+Package: sentia-desktop
+Architecture: all
+Depends: ${misc:Depends}, sentia-base (= ${binary:Version}), xfce4, lightdm, network-manager
+Description: Sentia desktop metapackage
+ Minimal Sentia desktop package set.
+
+Package: sentia-ai
+Architecture: all
+Depends: ${misc:Depends}, sentia-base (= ${binary:Version})
+Description: Sentia local AI metapackage
+ Default local AI package set.
+
+Package: sentia-repository-config
+Architecture: all
+Depends: ${misc:Depends}, sentia-archive-keyring
+Description: Sentia APT sources, pinning, and update policy
+ Installs literal Debian 13 Trixie Deb822 sources, Sentia signed local file
+ archive source, explicit Origin pin policy, and Debian security unattended
+ upgrade configuration.

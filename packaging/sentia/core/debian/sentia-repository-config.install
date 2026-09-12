@@ -1,0 +1,5 @@
+debian/staged-config/debian.sources etc/apt/sources.list.d/
+debian/staged-config/sentia.sources etc/apt/sources.list.d/
+debian/staged-config/50-sentia-origin.pref etc/apt/preferences.d/
+debian/staged-config/20auto-upgrades etc/apt/apt.conf.d/
+debian/staged-config/52sentia-unattended-upgrades etc/apt/apt.conf.d/

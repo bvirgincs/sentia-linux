@@ -1,0 +1,6 @@
+packaging/sentia/core
+config/apt/debian.sources
+config/apt/sentia.sources
+config/apt/20auto-upgrades
+config/apt/52sentia-unattended-upgrades
+config/apt/50-sentia-origin.pref

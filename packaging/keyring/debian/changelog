@@ -1,0 +1,5 @@
+sentia-archive-keyring (0.1.0-1) trixie; urgency=medium
+
+  * Initial keyring package for Sentia archive trust bootstrap.
+
+ -- Sentia Packaging Team <packaging@sentia.invalid>  Sat, 12 Sep 2026 18:46:00 +0000

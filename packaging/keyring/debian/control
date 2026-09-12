@@ -1,0 +1,13 @@
+Source: sentia-archive-keyring
+Section: admin
+Priority: optional
+Maintainer: Sentia Packaging Team <packaging@sentia.invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: sentia-archive-keyring
+Architecture: all
+Depends: ${misc:Depends}
+Description: Sentia archive public keyring
+ Installs the public keyring used by Signed-By for the Sentia archive.

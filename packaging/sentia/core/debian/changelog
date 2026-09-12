@@ -1,0 +1,7 @@
+sentia-core (0.1.0-1) trixie; urgency=medium
+
+  * Initial Sentia metapackage framework.
+  * Ship repository policy package with explicit Debian Trixie and Sentia local
+    signed-archive configuration.
+
+ -- Sentia Packaging Team <packaging@sentia.invalid>  Sat, 12 Sep 2026 18:45:00 +0000

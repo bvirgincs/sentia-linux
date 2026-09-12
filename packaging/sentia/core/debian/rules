@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+.RECIPEPREFIX = >
+
+required_staged_config := \
+  staged-config-inputs/debian.sources \
+  staged-config-inputs/sentia.sources \
+  staged-config-inputs/20auto-upgrades \
+  staged-config-inputs/52sentia-unattended-upgrades \
+  staged-config-inputs/50-sentia-origin.pref
+
+required_installed_config := \
+  debian/staged-config/debian.sources \
+  debian/staged-config/sentia.sources \
+  debian/staged-config/20auto-upgrades \
+  debian/staged-config/52sentia-unattended-upgrades \
+  debian/staged-config/50-sentia-origin.pref
+
+%:
+> dh $@
+
+override_dh_auto_build:
+> for file in $(required_staged_config); do \
+>   if [ ! -f "$$file" ]; then \
+>     echo "Missing staged config input: $$file" >&2; \
+>     exit 1; \
+>   fi; \
+> done
+> install -d debian/staged-config
+> cp -a staged-config-inputs/. debian/staged-config/
+> for file in $(required_installed_config); do \
+>   if [ ! -f "$$file" ]; then \
+>     echo "Missing install config input: $$file" >&2; \
+>     exit 1; \
+>   fi; \
+> done
+
+execute_after_dh_clean:
+> rm -rf debian/staged-config
