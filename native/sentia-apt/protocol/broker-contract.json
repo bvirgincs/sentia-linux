@@ -1,0 +1,89 @@
+{
+  "protocol_version": "1.0",
+  "description": "Canonical plan/execute contract between privilege broker and sentia-apt-worker.",
+  "security_model": {
+    "execute_requires_root": true,
+    "execute_requires_polkit_authorization": true,
+    "execute_requires_single_use_plan_digest": true,
+    "worker_revalidates_everything": true,
+    "rejects_arbitrary_shell": true
+  },
+  "required_approval_fields": [
+    "plan_digest",
+    "broker_session_id",
+    "authorization_id",
+    "expires_at",
+    "allow_source_change",
+    "allow_essential_removal",
+    "allow_held_change"
+  ],
+  "plan_then_execute_flow": [
+    "1) broker sends mode=plan request",
+    "2) worker returns canonical_plan + plan_digest",
+    "3) broker displays exact canonical plan to trusted UI",
+    "4) after polkit success, broker sends mode=execute with approval payload",
+    "5) worker re-resolves under lock and compares digest before execution"
+  ],
+  "examples": {
+    "install_plan_request": {
+      "request_id": "req-install-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_install",
+      "arguments": {
+        "mode": "plan",
+        "packages": [
+          "ripgrep",
+          "fd-find"
+        ]
+      }
+    },
+    "install_execute_request": {
+      "request_id": "req-install-exec-001",
+      "protocol_version": "1.0",
+      "operation": "apt_install",
+      "arguments": {
+        "mode": "execute",
+        "packages": [
+          "ripgrep",
+          "fd-find"
+        ]
+      },
+      "approval": {
+        "plan_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "broker_session_id": "broker-session-1234",
+        "authorization_id": "polkit-auth-5678",
+        "expires_at": "2030-01-01T00:00:00Z",
+        "allow_source_change": false,
+        "allow_essential_removal": false,
+        "allow_held_change": false
+      }
+    },
+    "remove_plan_request": {
+      "request_id": "req-remove-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_remove",
+      "arguments": {
+        "mode": "plan",
+        "packages": [
+          "example-package"
+        ]
+      }
+    },
+    "upgrade_plan_request": {
+      "request_id": "req-upgrade-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_upgrade",
+      "arguments": {
+        "mode": "plan"
+      }
+    },
+    "update_plan_request": {
+      "request_id": "req-update-plan-001",
+      "protocol_version": "1.0",
+      "operation": "apt_update",
+      "arguments": {
+        "mode": "plan"
+      }
+    }
+  }
+}

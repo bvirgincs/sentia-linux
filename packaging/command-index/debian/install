@@ -1,0 +1,2 @@
+build/command-index/generate_command_index.py usr/libexec/sentia/
+build/command-index/README.md usr/share/doc/sentia-command-index/

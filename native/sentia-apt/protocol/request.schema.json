@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.dev/schemas/apt-worker/request.schema.json",
+  "title": "Sentia APT Worker Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "protocol_version",
+    "operation"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "protocol_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "apt_search",
+        "apt_package_info",
+        "apt_package_policy",
+        "apt_simulate_install",
+        "apt_install",
+        "apt_remove",
+        "apt_update",
+        "apt_upgrade",
+        "package_owns_file",
+        "diagnostics",
+        "search",
+        "package_info",
+        "policy",
+        "package_policy",
+        "simulate_install",
+        "install",
+        "remove",
+        "update",
+        "upgrade",
+        "packagefileownership"
+      ]
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "version_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "plan",
+            "execute"
+          ]
+        },
+        "packages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9+.-]{0,127}$"
+          }
+        },
+        "file_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "index_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
+    "approval": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "plan_digest",
+        "broker_session_id",
+        "authorization_id",
+        "expires_at"
+      ],
+      "properties": {
+        "plan_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "broker_session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "authorization_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "allow_source_change": {
+          "type": "boolean",
+          "default": false
+        },
+        "allow_essential_removal": {
+          "type": "boolean",
+          "default": false
+        },
+        "allow_held_change": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}
