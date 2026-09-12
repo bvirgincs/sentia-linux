@@ -35,6 +35,8 @@ pub use tools::{
     ToolResult, ToolResultStatus, MAX_TOOL_INPUT_BYTES_V1, MAX_TOOL_OUTPUT_BYTES_V1,
 };
 pub use transactions::{
-    ApprovalBinding, ApprovalGrant, ApprovalPlan, CanonicalTransactionPlan, PackageDelta,
-    RequiredEvidence, ServiceDelta, TransactionKind,
+    ApprovalBinding, ApprovalGrant, ApprovalPlan, AuthorizationApplyRequest,
+    AuthorizationApplyResult, AuthorizationOperation, AuthorizationPrepareRequest,
+    AuthorizationPrepareResult, AuthorizationRequestId, AuthorizationSessionId,
+    CanonicalTransactionPlan, PackageDelta, RequiredEvidence, ServiceDelta, TransactionKind,
 };

@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 pub type PlanId = BoundedString<64>;
 pub type ApprovalId = BoundedString<64>;
 pub type Sha256Digest = BoundedString<64>;
+pub type AuthorizationRequestId = BoundedString<64>;
+pub type AuthorizationSessionId = BoundedString<64>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -174,4 +176,161 @@ pub struct ApprovalGrant {
     pub broker_token: BoundedString<128>,
     pub granted_at_ms: u64,
     pub expires_at_ms: u64,
+}
+
+impl ApprovalGrant {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.expires_at_ms <= self.granted_at_ms {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "approval grant expiry must be after granted timestamp",
+                false,
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthorizationOperation {
+    Prepare,
+    Apply,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizationPrepareRequest {
+    pub version: BoundedString<24>,
+    pub request_id: AuthorizationRequestId,
+    pub session_id: AuthorizationSessionId,
+    pub caller_uid: u32,
+    pub kind: TransactionKind,
+    pub requested_targets: Vec<BoundedString<128>>,
+    pub state_fingerprint_sha256: Sha256Digest,
+    pub require_non_cached_auth: bool,
+}
+
+impl AuthorizationPrepareRequest {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.version.as_str() != PROTOCOL_VERSION_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::UnsupportedVersion,
+                "authorization prepare request version is not sentia.v1",
+                false,
+            ));
+        }
+        if self.requested_targets.is_empty() {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "authorization prepare request requires at least one requested target",
+                false,
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizationPrepareResult {
+    pub version: BoundedString<24>,
+    pub request_id: AuthorizationRequestId,
+    pub operation: AuthorizationOperation,
+    pub approval_plan: ApprovalPlan,
+}
+
+impl AuthorizationPrepareResult {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.version.as_str() != PROTOCOL_VERSION_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::UnsupportedVersion,
+                "authorization prepare result version is not sentia.v1",
+                false,
+            ));
+        }
+        if self.operation != AuthorizationOperation::Prepare {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "authorization prepare result operation must be prepare",
+                false,
+            ));
+        }
+        self.approval_plan.validate()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizationApplyRequest {
+    pub version: BoundedString<24>,
+    pub request_id: AuthorizationRequestId,
+    pub session_id: AuthorizationSessionId,
+    pub caller_uid: u32,
+    pub approval_grant: ApprovalGrant,
+    pub expected_operation_digest_sha256: Sha256Digest,
+    pub expected_state_digest_sha256: Sha256Digest,
+}
+
+impl AuthorizationApplyRequest {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.version.as_str() != PROTOCOL_VERSION_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::UnsupportedVersion,
+                "authorization apply request version is not sentia.v1",
+                false,
+            ));
+        }
+        self.approval_grant.validate()?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthorizationApplyResult {
+    pub version: BoundedString<24>,
+    pub request_id: AuthorizationRequestId,
+    pub operation: AuthorizationOperation,
+    pub approval_id: ApprovalId,
+    pub applied: bool,
+    pub applied_at_ms: u64,
+    pub evidence: Vec<RequiredEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<ContractError>,
+}
+
+impl AuthorizationApplyResult {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.version.as_str() != PROTOCOL_VERSION_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::UnsupportedVersion,
+                "authorization apply result version is not sentia.v1",
+                false,
+            ));
+        }
+        if self.operation != AuthorizationOperation::Apply {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "authorization apply result operation must be apply",
+                false,
+            ));
+        }
+        if self.applied {
+            if self.error.is_some() {
+                return Err(ContractError::new(
+                    ContractErrorCode::ValidationFailed,
+                    "applied authorization result cannot include error",
+                    false,
+                ));
+            }
+        } else if self.error.is_none() {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "failed authorization apply result requires structured error",
+                false,
+            ));
+        }
+        Ok(())
+    }
 }
