@@ -3,9 +3,11 @@
 chromium
 lightdm
 lightdm-gtk-greeter
+lxpolkit
 network-manager
 network-manager-gnome
-policykit-1-gnome
+pkexec
+polkitd
 pulseaudio | pipewire-audio
 pavucontrol
 thunar
