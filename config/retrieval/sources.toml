@@ -1,0 +1,48 @@
+schema_version = 1
+max_file_count = 10000
+max_file_bytes = 262144
+max_total_bytes = 67108864
+max_query_results = 8
+
+[[source]]
+name = "sentia-packaged-docs"
+kind = "filesystem"
+trust_label = "SENTIA_PACKAGED_DOC"
+roots = [
+  "/usr/share/doc/sentia",
+  "/usr/share/doc/sentia-docs",
+  "/usr/share/doc/sentia-router"
+]
+include_extensions = ["md", "txt", "rst", "README"]
+max_depth = 5
+
+[[source]]
+name = "dpkg-installed"
+kind = "dpkg_status"
+trust_label = "LOCAL_DPKG_STATUS"
+path = "/var/lib/dpkg/status"
+
+[[source]]
+name = "selected-debian-manpages"
+kind = "man_directory"
+trust_label = "DEBIAN_MANPAGE"
+roots = ["/usr/share/man/man1", "/usr/share/man/man5", "/usr/share/man/man8"]
+allow_pages = [
+  "apt",
+  "apt-get",
+  "dpkg",
+  "systemctl",
+  "journalctl",
+  "bash",
+  "sources.list",
+  "systemd.service"
+]
+max_depth = 2
+
+[[source]]
+name = "service-documentation"
+kind = "filesystem"
+trust_label = "DEBIAN_SERVICE_DOC"
+roots = ["/usr/share/doc/systemd", "/usr/share/doc/dbus"]
+include_extensions = ["txt", "md", "README", "Debian"]
+max_depth = 4
