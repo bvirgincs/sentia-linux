@@ -250,6 +250,41 @@ class ReleaseArtifactCLITests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("sha256 mismatch", result.stderr.lower())
 
+    def test_fifo_manifest_is_rejected_without_blocking(self) -> None:
+        work = self.workspace("fifo")
+        manifest = work / "manifest.json"
+        os.mkfifo(manifest)
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "verify", str(manifest)],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("regular file", result.stderr)
+
+    def test_published_parts_survive_temporary_cleanup_failure(self) -> None:
+        work = self.workspace("cleanup")
+        source = work / "bundle.iso"
+        source.write_bytes(b"Sentia artifact")
+        parts_dir = work / "parts"
+        parts_dir.mkdir()
+        real_unlink = Path.unlink
+
+        def fail_temp_unlink(path_obj: Path, *args, **kwargs):
+            if path_obj.name.startswith(".bundle.iso.manifest."):
+                raise PermissionError("simulated temporary-file cleanup failure")
+            return real_unlink(path_obj, *args, **kwargs)
+
+        with patch.object(Path, "unlink", new=fail_temp_unlink):
+            with self.assertRaises(MODULE.ReleaseArtifactError) as ctx:
+                MODULE.split_artifact(source, parts_dir, chunk_size=4)
+
+        self.assertIn("were published", str(ctx.exception))
+        manifest = MODULE.manifest_path_for(parts_dir, source.name)
+        verified = MODULE.verify_manifest(manifest)
+        self.assertEqual(verified.original.size, source.stat().st_size)
+
     def test_traversal_and_absolute_paths_rejected(self) -> None:
         _, _, _, parts_dir, manifest, manifest_data = self.make_fixture(chunk_size=19)
 

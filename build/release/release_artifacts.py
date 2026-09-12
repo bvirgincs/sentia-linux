@@ -264,17 +264,24 @@ def _manifest_record_from_data(data: object) -> ManifestRecord:
 def load_manifest(manifest_path: Path | str) -> ManifestRecord:
     path = Path(manifest_path)
     try:
-        stat_result = path.stat()
+        flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        with os.fdopen(fd, "rb") as handle:
+            stat_result = os.fstat(handle.fileno())
+            if not stat.S_ISREG(stat_result.st_mode):
+                raise ReleaseArtifactError(f"manifest file {path} must be a regular file")
+            if stat_result.st_size > MAX_MANIFEST_BYTES:
+                raise ReleaseArtifactError(
+                    f"manifest file {path} exceeds {MAX_MANIFEST_BYTES}-byte limit"
+                )
+            raw_bytes = handle.read(MAX_MANIFEST_BYTES + 1)
+        if len(raw_bytes) > MAX_MANIFEST_BYTES:
+            raise ReleaseArtifactError(
+                f"manifest file {path} exceeds {MAX_MANIFEST_BYTES}-byte limit"
+            )
+        raw_text = raw_bytes.decode("utf-8")
     except FileNotFoundError as exc:
         raise ReleaseArtifactError(f"manifest file {path} does not exist") from exc
-    except OSError as exc:
-        raise ReleaseArtifactError(f"cannot stat manifest file {path}: {exc.strerror or exc}") from exc
-    if stat_result.st_size > MAX_MANIFEST_BYTES:
-        raise ReleaseArtifactError(
-            f"manifest file {path} is {stat_result.st_size} bytes, exceeds {MAX_MANIFEST_BYTES}-byte limit"
-        )
-    try:
-        raw_text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
         raise ReleaseArtifactError(f"manifest file {path} is not valid UTF-8") from exc
     except OSError as exc:
@@ -497,17 +504,19 @@ def split_artifact(
             raise ReleaseArtifactError(f"refusing to overwrite existing manifest {manifest_path}") from exc
         except OSError as exc:
             raise ReleaseArtifactError(f"cannot publish manifest {manifest_path}: {exc.strerror or exc}") from exc
-        try:
-            temp_manifest_path.unlink()
-        except FileNotFoundError:
-            pass
-        except OSError as exc:
-            raise ReleaseArtifactError(
-                f"cleanup failed removing temporary manifest {temp_manifest_path}: {exc.strerror or exc}"
-            ) from exc
     except ReleaseArtifactError as exc:
         cleanup_errors = _cleanup_owned_paths(created_paths)
         _raise_with_cleanup(exc, cleanup_errors)
+
+    try:
+        temp_manifest_path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        raise ReleaseArtifactError(
+            f"artifact parts and manifest were published, but cleanup failed for "
+            f"{temp_manifest_path}: {exc.strerror or exc}"
+        ) from exc
 
     return SplitOutcome(manifest_path=manifest_path, manifest=manifest)
 
