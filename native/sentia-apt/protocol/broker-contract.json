@@ -8,6 +8,17 @@
     "framing": "single JSON request object in stdin; single JSON response object in stdout",
     "encoding": "UTF-8"
   },
+  "runtime_limits": {
+    "max_request_bytes": 1048576,
+    "max_response_bytes": 1048576,
+    "max_plan_retained_bytes": 262144,
+    "plan_timeout_seconds": 30,
+    "execute_timeout_seconds": 900
+  },
+  "execution_environment": {
+    "broker_sets_explicit_environment": true,
+    "ignore_user_environment": true
+  },
   "request_schema": "request.schema.json",
   "response_schema": "response.schema.json",
   "security_model": {
@@ -35,6 +46,22 @@
     "5) broker sends mode=execute with approval payload",
     "6) worker locks apt state, re-resolves, recomputes digest, rejects if changed"
   ],
+  "external_operation_adapter": {
+    "description": "Broker may accept provisional external operations and map to worker requests.",
+    "external_shape": {
+      "operation": "apt_install|apt_remove|apt_update|apt_upgrade",
+      "packages": [
+        "optional package names for install/remove"
+      ]
+    },
+    "mapping_rules": [
+      "external.operation maps to request.operation",
+      "for preview path broker emits arguments.mode=plan",
+      "for execution path broker emits arguments.mode=execute plus approval object",
+      "external.packages maps to arguments.packages for install/remove",
+      "update/upgrade requests omit arguments.packages"
+    ]
+  },
   "operation_matrix": {
     "apt_search": {
       "mode": "read_only",

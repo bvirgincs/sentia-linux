@@ -30,6 +30,12 @@ class ProtocolContractTests(unittest.TestCase):
         self.assertEqual(contract["method_version"], 1)
         self.assertEqual(contract["protocol_version"], "1.0")
         self.assertEqual(contract["binary_path"], "/usr/libexec/sentia/sentia-apt")
+        self.assertEqual(contract["runtime_limits"]["max_request_bytes"], 1048576)
+        self.assertEqual(contract["runtime_limits"]["max_response_bytes"], 1048576)
+        self.assertEqual(contract["runtime_limits"]["max_plan_retained_bytes"], 262144)
+        self.assertEqual(contract["runtime_limits"]["plan_timeout_seconds"], 30)
+        self.assertEqual(contract["runtime_limits"]["execute_timeout_seconds"], 900)
+        self.assertTrue(contract["execution_environment"]["ignore_user_environment"])
         required = set(contract["required_approval_fields"])
         self.assertEqual(
             required,
@@ -45,6 +51,19 @@ class ProtocolContractTests(unittest.TestCase):
         )
         execute_example = contract["examples"]["install_execute_request"]["approval"]
         self.assertRegex(execute_example["plan_digest"], r"^[a-f0-9]{64}$")
+
+    def test_broker_contract_external_adapter_mapping_present(self) -> None:
+        contract = json.loads((PROTOCOL_DIR / "broker-contract.json").read_text())
+        adapter = contract["external_operation_adapter"]
+        self.assertEqual(
+            adapter["external_shape"]["operation"],
+            "apt_install|apt_remove|apt_update|apt_upgrade",
+        )
+        rules = adapter["mapping_rules"]
+        self.assertIn(
+            "for execution path broker emits arguments.mode=execute plus approval object",
+            rules,
+        )
 
     def test_commands_file_contains_execute_example(self) -> None:
         commands = json.loads((PROTOCOL_DIR / "commands.json").read_text())
