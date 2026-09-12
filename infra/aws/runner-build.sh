@@ -42,5 +42,6 @@ echo "signing key id: $SENTIA_REPO_SIGNING_KEY_ID"
 run_step packages make packages
 run_step repo make repo
 run_step iso make iso
+run_step test-iso make test-iso
 echo "ALL_OK" > /var/log/sentia-build.status
 echo "=== DONE $(date -u +%FT%TZ) ==="
