@@ -152,6 +152,14 @@ set -euo pipefail
 echo '$(timestamp_utc)' > '${CHROOT_DIR}/.sentia-bootstrap.complete'
 "
 
+# The development archive signing key lives outside the repository and outside
+# every build output. Only the exported public keyring is ever made visible to
+# the builder; the secret key stays in the host signing home.
+require_command gpg
+dev_fingerprint="$("${REPO_ROOT}/build/signing/init-dev-key.sh")"
+log "development signing fingerprint: ${dev_fingerprint}"
+log "development signing home: ${SIGNING_HOME_DIR}"
+
 log "bootstrap complete"
 log "host rust path: $(command -v rustc)"
 log "host cargo path: $(command -v cargo)"

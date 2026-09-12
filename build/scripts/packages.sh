@@ -26,11 +26,22 @@ if [[ "${SENTIA_PACKAGE_BUILD_IN_BUILDER:-1}" == "1" ]]; then
   [[ "${entrypoint_in_builder}" != "${PACKAGE_BUILD_ENTRYPOINT}" ]] ||
     die "package build entrypoint must live inside the repository to run in the builder: ${PACKAGE_BUILD_ENTRYPOINT}"
 
+  # sentia-archive-keyring embeds the public archive key. Stage only that
+  # exported public keyring into the builder-visible artifacts bind; the secret
+  # key never leaves the host signing home.
+  require_file "${ARCHIVE_PUBLIC_KEYRING}"
+  builder_signing_dir="${SENTIA_BUILDER_ARTIFACTS_DIR}/signing/public"
+  mkdir -p "${builder_signing_dir}"
+  cp -f "${ARCHIVE_PUBLIC_KEYRING}" "${builder_signing_dir}/sentia-archive-keyring.gpg"
+  chmod 0644 "${builder_signing_dir}/sentia-archive-keyring.gpg"
+
   SENTIA_BUILDER_WORKSPACE="${REPO_ROOT}" \
   SENTIA_BUILDER_WORKSPACE_MODE=rw \
   run_in_builder "build Debian packages" "
 set -euo pipefail
 export SENTIA_HEAVY_LOCK=/artifacts/.locks/heavy.lock
+export SENTIA_SIGNING_HOME=/artifacts/signing
+export SENTIA_ARCHIVE_PUBLIC_KEYRING=/artifacts/signing/public/sentia-archive-keyring.gpg
 exec '${entrypoint_in_builder}'
 "
 else

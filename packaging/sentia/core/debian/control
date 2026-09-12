@@ -18,12 +18,6 @@ Depends: ${misc:Depends}, sentia-release (= ${binary:Version}), sentia-archive-k
 Description: Sentia base metapackage
  Minimal Sentia base integration package.
 
-Package: sentia-desktop
-Architecture: all
-Depends: ${misc:Depends}, sentia-base (= ${binary:Version}), xfce4, lightdm, network-manager
-Description: Sentia desktop metapackage
- Minimal Sentia desktop package set.
-
 Package: sentia-ai
 Architecture: all
 Depends: ${misc:Depends}, sentia-base (= ${binary:Version})

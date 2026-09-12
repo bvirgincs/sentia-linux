@@ -10,6 +10,7 @@ Homepage: https://github.com/bvirgincs/sentia-linux
 Package: sentia-desktop
 Architecture: all
 Depends:
+ sentia-base,
  sentia-desktop-settings,
  chromium,
  dbus-x11,

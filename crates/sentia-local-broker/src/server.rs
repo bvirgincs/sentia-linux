@@ -376,7 +376,7 @@ impl Broker {
                     })
                     .await;
             }
-            Ok(Err(error)) if cancellation.is_cancelled() => {
+            Ok(Err(_error)) if cancellation.is_cancelled() => {
                 send_cancelled(&events, &request_id).await
             }
             Ok(Err(error)) => send_llama_error(&events, &request_id, error).await,

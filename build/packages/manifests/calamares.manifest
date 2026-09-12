@@ -1,0 +1,5 @@
+packaging/calamares
+config/calamares/COPYING
+config/calamares/calamares
+config/calamares/calamares-modules
+config/calamares/helpers
