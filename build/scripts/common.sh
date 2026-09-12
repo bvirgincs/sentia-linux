@@ -79,11 +79,14 @@ require_file() {
   [[ -f "$1" ]] || die "required file not found: $1"
 }
 
+# Recursive on purpose: package build scripts emit into per-package
+# subdirectories of artifacts/packages, so a depth-1 check reports an empty
+# directory even when every .deb built successfully.
 require_dir_nonempty() {
   local dir="$1"
   [[ -d "$dir" ]] || die "required directory not found: $dir"
   local any_file
-  any_file="$(find "$dir" -mindepth 1 -maxdepth 1 -type f | head -n 1 || true)"
+  any_file="$(find "$dir" -mindepth 1 -type f | head -n 1 || true)"
   [[ -n "$any_file" ]] || die "required directory is empty: $dir"
 }
 
