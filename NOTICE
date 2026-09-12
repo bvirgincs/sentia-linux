@@ -1,0 +1,9 @@
+Sentia Linux contains original Sentia foundation documentation and future
+Sentia-authored work that is intended to be licensed under Apache-2.0.
+
+Third-party and upstream-derived files retain their own licenses and
+corresponding-source obligations. This includes Debian-derived material,
+Calamares settings, and the GPL-linked APT worker and its associated Debian
+and apt dependencies.
+
+No qualified release has been produced from this checkpoint.
