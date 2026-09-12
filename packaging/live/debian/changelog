@@ -1,0 +1,5 @@
+sentia-live (0.1.0-1) unstable; urgency=medium
+
+  * Initial live-session integration package and installer launcher.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 18:00:00 +0000

@@ -1,0 +1,56 @@
+#!/bin/sh
+set -eu
+
+CHROOT="$(awk '$2 ~ /calamares/ && $2 ~ /\/proc$/ {sub(/\/proc$/, "", $2); print $2; exit}' /proc/mounts)"
+if [ -z "$CHROOT" ]; then
+    echo "Unable to determine Calamares target mount point" >&2
+    exit 1
+fi
+
+KNOWN_MEDIUM_PATHS="/run/live/medium /run/initramfs/live"
+MEDIUM_PATH=""
+for path in $KNOWN_MEDIUM_PATHS; do
+    if mountpoint -q "$path"; then
+        MEDIUM_PATH="$path"
+        break
+    fi
+done
+
+if [ "${1:-}" = "-u" ]; then
+    if [ -n "$MEDIUM_PATH" ] && mountpoint -q "$CHROOT$MEDIUM_PATH"; then
+        umount "$CHROOT$MEDIUM_PATH"
+    fi
+    rm -f "$CHROOT/etc/apt/sources.list.d/sentia-live-media.sources"
+    rmdir --ignore-fail-on-non-empty "$CHROOT/run/live/medium" "$CHROOT/run/live" 2>/dev/null || true
+    exit 0
+fi
+
+if [ -n "$MEDIUM_PATH" ]; then
+    mkdir -p "$CHROOT$MEDIUM_PATH"
+    mount --bind "$MEDIUM_PATH" "$CHROOT$MEDIUM_PATH"
+
+    {
+        printf 'Types: deb\n'
+        printf 'URIs: file:%s\n' "$MEDIUM_PATH"
+        printf 'Suites: trixie\n'
+        printf 'Components: main non-free-firmware\n'
+        printf 'Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg\n'
+    } > "$CHROOT/etc/apt/sources.list.d/sentia-live-media.sources"
+fi
+
+if [ -d "$CHROOT/usr/share/sentia/archive/dists/sentia-0.1" ] && [ -f "$CHROOT/usr/share/keyrings/sentia-archive-keyring.gpg" ]; then
+    SENTIA_ENABLED="yes"
+else
+    SENTIA_ENABLED="no"
+fi
+
+cat > "$CHROOT/etc/apt/sources.list.d/sentia-local.sources" <<'SENTIA_EOF'
+Types: deb
+URIs: file:/usr/share/sentia/archive
+Suites: sentia-0.1
+Components: main
+Signed-By: /usr/share/keyrings/sentia-archive-keyring.gpg
+SENTIA_EOF
+printf 'Enabled: %s\n' "$SENTIA_ENABLED" >> "$CHROOT/etc/apt/sources.list.d/sentia-local.sources"
+
+chroot "$CHROOT" apt-get update

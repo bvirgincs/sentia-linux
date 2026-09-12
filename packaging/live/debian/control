@@ -1,0 +1,22 @@
+Source: sentia-live
+Section: misc
+Priority: optional
+Maintainer: Sentia Developers <sentia-devel@invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/sentia-linux/sentia-linux
+
+Package: sentia-live
+Architecture: all
+Depends:
+ calamares,
+ pkexec,
+ sentia-calamares-settings,
+ x11-xserver-utils,
+ xdg-user-dirs,
+ ${misc:Depends}
+Description: Sentia live-only installer integration package
+ Provides live session desktop integration for launching Calamares through
+ pkexec and the existing polkit authorization boundary.
+ This package is intended for live media and is removed during installation.

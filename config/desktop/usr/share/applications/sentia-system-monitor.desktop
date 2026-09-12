@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Sentia System Monitor
+Comment=Open the system monitor (placeholder launcher)
+Exec=/usr/libexec/sentia-desktop/launch-monitor
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=monitor;system;resources;
+StartupNotify=true

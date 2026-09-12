@@ -1,0 +1,6 @@
+# Sentia desktop baseline for live-build (Debian 13/Trixie).
+# Keep this focused: no full xfce task package and no broad recommends bundles.
+sentia-desktop
+sentia-desktop-settings
+sentia-calamares-settings
+sentia-live

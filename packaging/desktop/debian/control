@@ -1,0 +1,50 @@
+Source: sentia-desktop
+Section: metapackages
+Priority: optional
+Maintainer: Sentia Developers <sentia-devel@invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/sentia-linux/sentia-linux
+
+Package: sentia-desktop
+Architecture: all
+Depends:
+ sentia-desktop-settings,
+ chromium,
+ dbus-x11,
+ lightdm,
+ lightdm-gtk-greeter,
+ network-manager,
+ network-manager-gnome,
+ pavucontrol,
+ policykit-1-gnome,
+ pulseaudio | pipewire-audio,
+ thunar,
+ xdg-user-dirs,
+ xdg-utils,
+ xfce4-notifyd,
+ xfce4-panel,
+ xfce4-pulseaudio-plugin,
+ xfce4-session,
+ xfce4-settings,
+ xfce4-terminal,
+ xfdesktop4,
+ xfwm4,
+ ${misc:Depends}
+Description: Sentia minimal Xfce desktop metapackage
+ Minimal Debian 13 desktop baseline for Sentia images.
+ This package intentionally pulls only essential Xfce, LightDM,
+ networking, audio controls, Chromium, and file manager components.
+ It avoids broad task bundles and does not depend on Sentia AI packages.
+
+Package: sentia-desktop-settings
+Architecture: all
+Depends:
+ xdg-utils,
+ xfce4-taskmanager | gnome-system-monitor,
+ ${misc:Depends}
+Description: Sentia desktop launchers, wallpaper, and defaults
+ Ships Sentia-owned desktop launchers, wallpaper, and Xfce defaults.
+ Includes compatibility wrappers so menu entries remain usable before
+ the native Sentia terminal and system monitor binaries are available.

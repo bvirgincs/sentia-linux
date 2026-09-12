@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+release_display_access() {
+    if command -v xhost >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
+        xhost -si:localuser:root >/dev/null 2>&1 || true
+    fi
+}
+
+trap release_display_access EXIT
+
+if command -v xhost >/dev/null 2>&1 && [ -n "${DISPLAY:-}" ]; then
+    xhost +si:localuser:root >/dev/null 2>&1 || true
+fi
+
+pkexec /usr/libexec/sentia-live/run-calamares-root "$@"

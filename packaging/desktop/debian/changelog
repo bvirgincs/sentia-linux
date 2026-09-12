@@ -1,0 +1,5 @@
+sentia-desktop (0.1.0-1) unstable; urgency=medium
+
+  * Initial minimal Sentia desktop metapackage and settings package.
+
+ -- Sentia Developers <sentia-devel@invalid>  Sat, 12 Sep 2026 18:00:00 +0000

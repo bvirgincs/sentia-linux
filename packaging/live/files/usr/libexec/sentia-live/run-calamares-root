@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+cleanup() {
+    if [ -f /etc/fstab.orig.sentia-live ]; then
+        mv /etc/fstab.orig.sentia-live /etc/fstab
+    fi
+}
+
+trap cleanup EXIT
+
+if [ -f /etc/fstab ]; then
+    mv /etc/fstab /etc/fstab.orig.sentia-live
+fi
+
+exec /usr/bin/calamares "$@"

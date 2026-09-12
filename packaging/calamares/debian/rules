@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -d debian/sentia-calamares-settings/etc/calamares
+	cp -a ../../config/calamares/calamares/. debian/sentia-calamares-settings/etc/calamares/
+	install -d debian/sentia-calamares-settings/usr/lib/calamares/modules
+	cp -a ../../config/calamares/calamares-modules/. debian/sentia-calamares-settings/usr/lib/calamares/modules/
+	install -d debian/sentia-calamares-settings/usr/share/calamares/helpers
+	cp -a ../../config/calamares/helpers/. debian/sentia-calamares-settings/usr/share/calamares/helpers/
+	chmod 0755 debian/sentia-calamares-settings/usr/share/calamares/helpers/*
+	install -d debian/sentia-calamares-settings/usr/share/doc/sentia-calamares-settings
+	install -m 0644 ../../config/calamares/COPYING debian/sentia-calamares-settings/usr/share/doc/sentia-calamares-settings/COPYING.upstream

@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -d debian/sentia-desktop-settings
+	cp -a ../../config/desktop/usr debian/sentia-desktop-settings/
+	cp -a ../../config/desktop/etc debian/sentia-desktop-settings/
+	chmod 0755 debian/sentia-desktop-settings/usr/libexec/sentia-desktop/*

@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+if [ -z "$DESKTOP_DIR" ]; then
+    DESKTOP_DIR="$HOME/Desktop"
+fi
+
+mkdir -p "$DESKTOP_DIR"
+cp /usr/share/applications/sentia-install.desktop "$DESKTOP_DIR/"
+chmod +x "$DESKTOP_DIR/sentia-install.desktop"
+
+if [ "${XDG_CURRENT_DESKTOP:-}" = "XFCE" ] && command -v gio >/dev/null 2>&1; then
+    gio set --type=string "$DESKTOP_DIR/sentia-install.desktop" metadata::trusted true || true
+    gio set --type=string "$DESKTOP_DIR/sentia-install.desktop" metadata::xfce-exe-checksum "$(sha256sum "$DESKTOP_DIR/sentia-install.desktop" | cut -d' ' -f1)" || true
+    touch "$DESKTOP_DIR/sentia-install.desktop"
+fi

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install Sentia Linux
+GenericName=Calamares Installer
+Exec=/usr/bin/sentia-install-calamares
+Comment=Install Sentia Linux to disk
+Keywords=calamares;installer;install;sentia;
+Icon=sentia-install
+Terminal=false
+Categories=Qt;System;
+StartupWMClass=calamares
+StartupNotify=true

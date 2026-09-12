@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+CHROOT="$(awk '$2 ~ /calamares/ && $2 ~ /\/proc$/ {sub(/\/proc$/, "", $2); print $2; exit}' /proc/mounts)"
+if [ -z "$CHROOT" ]; then
+    echo "Unable to determine Calamares target mount point" >&2
+    exit 1
+fi
+
+rm -f "$CHROOT/etc/apt/sources.list" \
+      "$CHROOT/etc/apt/sources.list.d/debian-live-media.list" \
+      "$CHROOT/etc/apt/sources.list.d/sentia-live-media.sources"
+
+cat > "$CHROOT/etc/apt/sources.list.d/debian.sources" <<'DEBIAN_EOF'
+Types: deb
+URIs: https://deb.debian.org/debian
+Suites: trixie trixie-updates
+Components: main non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: https://security.debian.org/debian-security
+Suites: trixie-security
+Components: main non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+DEBIAN_EOF
+
+if [ -d "$CHROOT/usr/share/sentia/archive/dists/sentia-0.1" ] && [ -f "$CHROOT/usr/share/keyrings/sentia-archive-keyring.gpg" ]; then
+    SENTIA_ENABLED="yes"
+else
+    SENTIA_ENABLED="no"
+fi
+
+cat > "$CHROOT/etc/apt/sources.list.d/sentia-local.sources" <<'SENTIA_EOF'
+Types: deb
+URIs: file:/usr/share/sentia/archive
+Suites: sentia-0.1
+Components: main
+Signed-By: /usr/share/keyrings/sentia-archive-keyring.gpg
+SENTIA_EOF
+printf 'Enabled: %s\n' "$SENTIA_ENABLED" >> "$CHROOT/etc/apt/sources.list.d/sentia-local.sources"
