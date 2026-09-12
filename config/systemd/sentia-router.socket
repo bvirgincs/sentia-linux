@@ -1,0 +1,12 @@
+[Unit]
+Description=Sentia per-user AI router socket
+Documentation=man:ai(1)
+
+[Socket]
+ListenStream=%t/sentia/router.sock
+DirectoryMode=0700
+SocketMode=0600
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

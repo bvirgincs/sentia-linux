@@ -1,0 +1,29 @@
+[package]
+name = "sentia-router"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+license = "Apache-2.0"
+description = "Per-user privacy-preserving AI router for Sentia Linux"
+publish = false
+
+[lib]
+name = "sentia_router"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sentia-router"
+path = "src/main.rs"
+
+[dependencies]
+async-trait = "0.1"
+hex = "0.4"
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sentia-protocol = { path = "../sentia-protocol" }
+sentia-local-broker = { path = "../sentia-local-broker" }
+thiserror = "1"
+tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-util = { version = "0.7", features = ["rt"] }
