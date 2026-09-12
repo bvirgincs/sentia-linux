@@ -30,7 +30,7 @@ require_command rsync
 signing_key_id="${SENTIA_REPO_SIGNING_KEY_ID:-}"
 [[ -n "${signing_key_id}" ]] || die "missing SENTIA_REPO_SIGNING_KEY_ID (signing agent must supply key id in host keyring)"
 
-signing_public_key="${SIGNING_INPUT_DIR}/public/sentia-archive-keyring.gpg"
+signing_public_key="${ARCHIVE_PUBLIC_KEYRING}"
 require_file "${signing_public_key}"
 
 [[ -x "${REPOSITORY_BUILD_ENTRYPOINT}" ]] ||
