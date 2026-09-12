@@ -1,0 +1,62 @@
+{
+  "version": "sentia.v1",
+  "socket_path": "$XDG_RUNTIME_DIR/sentia/router.sock",
+  "default_policy": "LOCAL_ONLY",
+  "allow_remote_providers": false,
+  "max_in_flight_requests": 8,
+  "max_queue_depth": 16,
+  "max_payload_bytes": 262144,
+  "max_stream_event_bytes": 8192,
+  "allowed_provider_ids": [],
+  "integration_sockets": {
+    "inference": {
+      "role": "inference_private",
+      "access_scope": "private_system",
+      "path": "/run/sentia-inference/llama.sock",
+      "owner_user": "sentia-inference",
+      "directory_mode_octal": "0700",
+      "socket_mode_octal": "0600",
+      "require_peer_uid_check": true,
+      "enforce_peer_uid_quotas": true,
+      "nonsecret_metrics_only": false,
+      "allow_cross_user_journal_access": false,
+      "privileged_mutation_authority": false
+    },
+    "local_broker": {
+      "role": "local_broker",
+      "access_scope": "local_multi_user",
+      "path": "/run/sentia-local/broker.sock",
+      "directory_mode_octal": "0755",
+      "socket_mode_octal": "0660",
+      "require_peer_uid_check": true,
+      "enforce_peer_uid_quotas": true,
+      "nonsecret_metrics_only": false,
+      "allow_cross_user_journal_access": false,
+      "privileged_mutation_authority": false
+    },
+    "health_metrics": {
+      "role": "health_metrics",
+      "access_scope": "local_multi_user",
+      "path": "/run/sentia-health/metrics.sock",
+      "directory_mode_octal": "0755",
+      "socket_mode_octal": "0660",
+      "require_peer_uid_check": true,
+      "enforce_peer_uid_quotas": true,
+      "nonsecret_metrics_only": true,
+      "allow_cross_user_journal_access": false,
+      "privileged_mutation_authority": false
+    },
+    "user_router": {
+      "role": "user_router",
+      "access_scope": "per_user",
+      "path": "$XDG_RUNTIME_DIR/sentia/router.sock",
+      "directory_mode_octal": "0700",
+      "socket_mode_octal": "0600",
+      "require_peer_uid_check": true,
+      "enforce_peer_uid_quotas": true,
+      "nonsecret_metrics_only": false,
+      "allow_cross_user_journal_access": false,
+      "privileged_mutation_authority": false
+    }
+  }
+}

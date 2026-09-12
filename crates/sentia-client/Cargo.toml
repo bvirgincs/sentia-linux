@@ -1,0 +1,19 @@
+[package]
+name = "sentia-client"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+license = "Apache-2.0"
+description = "Native command-line client for the Sentia AI router"
+publish = false
+
+[[bin]]
+name = "ai"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+sentia-protocol = { path = "../sentia-protocol" }
+sentia-router = { path = "../sentia-router" }
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal"] }

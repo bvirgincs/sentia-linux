@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "broker_socket": "/run/sentia-local/broker.sock",
+  "tool_socket": null,
+  "health_socket": null,
+  "max_request_bytes": 524288,
+  "max_connections": 64,
+  "max_inflight_per_connection": 8,
+  "max_agent_rounds": 4,
+  "max_generation_tokens": 2048,
+  "provider_timeout_ms": 120000,
+  "circuit_failure_threshold": 3,
+  "circuit_cooldown_ms": 60000
+}
