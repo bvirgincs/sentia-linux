@@ -2,7 +2,7 @@ use crate::bounded::BoundedString;
 use crate::errors::ContractError;
 use crate::provider::ProviderStatus;
 use crate::router::{RequestId, RequestStatus, RouterRequest, RouterResult, PROTOCOL_VERSION_V1};
-use crate::tools::ToolName;
+use crate::tools::{ToolName, ToolRequest, ToolResult};
 use serde::{Deserialize, Serialize};
 
 pub const SOCKET_TRANSPORT_V1: &str = "jsonl-unix-v1";
@@ -149,6 +149,18 @@ pub enum JsonlFrame {
         stream_id: StreamId,
         cancel_ack: CancelAck,
     },
+    ToolRequest {
+        version: String,
+        frame_id: FrameId,
+        stream_id: StreamId,
+        tool_request: ToolRequest,
+    },
+    ToolResult {
+        version: String,
+        frame_id: FrameId,
+        stream_id: StreamId,
+        tool_result: ToolResult,
+    },
 }
 
 impl JsonlFrame {
@@ -159,7 +171,9 @@ impl JsonlFrame {
             | JsonlFrame::Result { version, .. }
             | JsonlFrame::Error { version, .. }
             | JsonlFrame::Cancel { version, .. }
-            | JsonlFrame::CancelAck { version, .. } => version,
+            | JsonlFrame::CancelAck { version, .. }
+            | JsonlFrame::ToolRequest { version, .. }
+            | JsonlFrame::ToolResult { version, .. } => version,
         };
 
         if version == PROTOCOL_VERSION_V1 {

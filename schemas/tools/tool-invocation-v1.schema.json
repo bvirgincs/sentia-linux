@@ -33,58 +33,93 @@
         "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       }
     },
-    "tool_input": {
+    "contract_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "invalid_request",
+            "unsupported_version",
+            "permission_denied",
+            "policy_denied",
+            "payload_too_large",
+            "timeout",
+            "cancelled",
+            "provider_unavailable",
+            "tool_unavailable",
+            "validation_failed",
+            "internal"
+          ]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "details": { "type": "object" }
+      }
+    },
+    "tool_request": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "version",
         "request_id",
-        "tool_name",
-        "arguments",
+        "name",
+        "args",
         "max_input_bytes",
         "provenance"
       ],
       "properties": {
         "version": { "type": "string", "const": "sentia.v1" },
         "request_id": { "type": "string", "maxLength": 64 },
-        "tool_name": { "$ref": "#/$defs/tool_name" },
-        "arguments": { "type": "object" },
+        "name": { "$ref": "#/$defs/tool_name" },
+        "args": {},
         "max_input_bytes": {
           "type": "integer",
           "minimum": 256,
-          "maximum": 1048576
+          "maximum": 65536
         },
         "provenance": { "$ref": "#/$defs/provenance" }
       }
     },
-    "tool_output": {
+    "tool_result": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "version",
         "request_id",
-        "tool_name",
+        "name",
         "status",
-        "result",
+        "data",
         "max_output_bytes",
-        "duration_ms"
+        "duration_ms",
+        "truncated"
       ],
       "properties": {
         "version": { "type": "string", "const": "sentia.v1" },
         "request_id": { "type": "string", "maxLength": 64 },
-        "tool_name": { "$ref": "#/$defs/tool_name" },
+        "name": { "$ref": "#/$defs/tool_name" },
         "status": {
           "type": "string",
-          "enum": ["ok", "unavailable", "permission_denied", "timeout", "failed"]
+          "enum": [
+            "ok",
+            "unavailable",
+            "permission_denied",
+            "timeout",
+            "failed",
+            "cancelled"
+          ]
         },
-        "result": { "type": "object" },
+        "data": {},
         "max_output_bytes": {
           "type": "integer",
           "minimum": 256,
-          "maximum": 10485760
+          "maximum": 262144
         },
         "duration_ms": { "type": "integer", "minimum": 0 },
-        "error_code": { "type": "string", "maxLength": 64 },
+        "truncated": { "type": "boolean" },
+        "error": { "$ref": "#/$defs/contract_error" },
         "evidence": {
           "type": "array",
           "maxItems": 32,
@@ -94,7 +129,7 @@
     }
   },
   "oneOf": [
-    { "$ref": "#/$defs/tool_input" },
-    { "$ref": "#/$defs/tool_output" }
+    { "$ref": "#/$defs/tool_request" },
+    { "$ref": "#/$defs/tool_result" }
   ]
 }

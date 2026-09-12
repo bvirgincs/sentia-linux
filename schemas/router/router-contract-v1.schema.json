@@ -10,7 +10,9 @@
     { "$ref": "#/$defs/result_frame" },
     { "$ref": "#/$defs/error_frame" },
     { "$ref": "#/$defs/cancel_frame" },
-    { "$ref": "#/$defs/cancel_ack_frame" }
+    { "$ref": "#/$defs/cancel_ack_frame" },
+    { "$ref": "#/$defs/tool_request_frame" },
+    { "$ref": "#/$defs/tool_result_frame" }
   ],
   "$defs": {
     "bounded_id": {
@@ -422,6 +424,46 @@
         "frame_id": { "$ref": "#/$defs/bounded_id" },
         "stream_id": { "$ref": "#/$defs/bounded_id" },
         "cancel_ack": { "$ref": "#/$defs/cancel_ack" }
+      }
+    },
+    "tool_request_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame_type",
+        "version",
+        "frame_id",
+        "stream_id",
+        "tool_request"
+      ],
+      "properties": {
+        "frame_type": { "const": "tool_request" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "tool_request": {
+          "$ref": "../tools/tool-invocation-v1.schema.json#/$defs/tool_request"
+        }
+      }
+    },
+    "tool_result_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame_type",
+        "version",
+        "frame_id",
+        "stream_id",
+        "tool_result"
+      ],
+      "properties": {
+        "frame_type": { "const": "tool_result" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "tool_result": {
+          "$ref": "../tools/tool-invocation-v1.schema.json#/$defs/tool_result"
+        }
       }
     }
   }

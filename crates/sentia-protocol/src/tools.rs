@@ -1,6 +1,8 @@
+use crate::bounded::BoundedString;
 use crate::errors::{ContractError, ContractErrorCode};
-use crate::router::PROTOCOL_VERSION_V1;
+use crate::router::{RequestId, PROTOCOL_VERSION_V1};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +41,166 @@ pub enum CancellationPolicy {
     NotCancellable,
     BestEffort,
     MustCancel,
+}
+
+pub const MAX_TOOL_INPUT_BYTES_V1: usize = 65_536;
+pub const MAX_TOOL_OUTPUT_BYTES_V1: usize = 262_144;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolProvenanceSource {
+    Router,
+    Cli,
+    Ui,
+    SystemTask,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ToolProvenance {
+    pub source: ToolProvenanceSource,
+    pub timestamp_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<RequestId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolResultStatus {
+    Ok,
+    Unavailable,
+    PermissionDenied,
+    Timeout,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolEvidenceKind {
+    Command,
+    Log,
+    Json,
+    Snapshot,
+    Checksum,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ToolEvidence {
+    pub kind: ToolEvidenceKind,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<BoundedString<64>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ToolRequest {
+    pub version: String,
+    pub request_id: RequestId,
+    pub name: ToolName,
+    pub args: Value,
+    pub max_input_bytes: u32,
+    pub provenance: ToolProvenance,
+}
+
+impl ToolRequest {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.version != PROTOCOL_VERSION_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::UnsupportedVersion,
+                "tool request version is not sentia.v1",
+                false,
+            ));
+        }
+        if self.max_input_bytes == 0 || self.max_input_bytes as usize > MAX_TOOL_INPUT_BYTES_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "tool request max_input_bytes exceeds protocol bounds",
+                false,
+            ));
+        }
+
+        let size = json_serialized_size(&self.args, "tool request args")?;
+        if size > self.max_input_bytes as usize {
+            return Err(ContractError::new(
+                ContractErrorCode::PayloadTooLarge,
+                "tool request args exceed declared max_input_bytes",
+                false,
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ToolResult {
+    pub version: String,
+    pub request_id: RequestId,
+    pub name: ToolName,
+    pub status: ToolResultStatus,
+    pub data: Value,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<ToolEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<ContractError>,
+    pub max_output_bytes: u32,
+    pub duration_ms: u32,
+    pub truncated: bool,
+}
+
+impl ToolResult {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.version != PROTOCOL_VERSION_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::UnsupportedVersion,
+                "tool result version is not sentia.v1",
+                false,
+            ));
+        }
+        if self.max_output_bytes == 0 || self.max_output_bytes as usize > MAX_TOOL_OUTPUT_BYTES_V1 {
+            return Err(ContractError::new(
+                ContractErrorCode::ValidationFailed,
+                "tool result max_output_bytes exceeds protocol bounds",
+                false,
+            ));
+        }
+
+        let size = json_serialized_size(&self.data, "tool result data")?;
+        if size > self.max_output_bytes as usize {
+            return Err(ContractError::new(
+                ContractErrorCode::PayloadTooLarge,
+                "tool result data exceeds declared max_output_bytes",
+                false,
+            ));
+        }
+
+        match self.status {
+            ToolResultStatus::Ok => {
+                if self.error.is_some() {
+                    return Err(ContractError::new(
+                        ContractErrorCode::ValidationFailed,
+                        "tool result status=ok cannot include error",
+                        false,
+                    ));
+                }
+            }
+            _ => {
+                if self.error.is_none() {
+                    return Err(ContractError::new(
+                        ContractErrorCode::ValidationFailed,
+                        "tool result status requires structured error details",
+                        false,
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -311,9 +473,9 @@ fn required_definition(name: ToolName) -> ToolDefinition {
         area,
         privilege_class,
         privacy_class,
-        input_schema_ref: "schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_input"
+        input_schema_ref: "schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_request"
             .to_owned(),
-        output_schema_ref: "schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_output"
+        output_schema_ref: "schemas/tools/tool-invocation-v1.schema.json#/$defs/tool_result"
             .to_owned(),
         provenance_required: true,
         timeout_ms,
@@ -396,4 +558,16 @@ fn inferred_privacy(name: ToolName) -> PrivacyClass {
         | ToolName::ServiceEnable => PrivacyClass::Restricted,
         _ => PrivacyClass::Public,
     }
+}
+
+fn json_serialized_size(value: &Value, context: &str) -> Result<usize, ContractError> {
+    serde_json::to_vec(value)
+        .map(|bytes| bytes.len())
+        .map_err(|error| {
+            ContractError::new(
+                ContractErrorCode::Internal,
+                format!("{context} failed to serialize for bounded-size check: {error}"),
+                false,
+            )
+        })
 }

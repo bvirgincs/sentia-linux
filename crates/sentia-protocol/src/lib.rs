@@ -27,8 +27,9 @@ pub use socket::{
     UnixSocketSecurity, SOCKET_TRANSPORT_V1,
 };
 pub use tools::{
-    CancellationPolicy, PrivilegeClass, PrivacyClass, ToolArea, ToolDefinition, ToolName,
-    ToolRegistry,
+    CancellationPolicy, PrivilegeClass, PrivacyClass, ToolArea, ToolDefinition, ToolEvidence,
+    ToolEvidenceKind, ToolName, ToolProvenance, ToolProvenanceSource, ToolRegistry, ToolRequest,
+    ToolResult, ToolResultStatus, MAX_TOOL_INPUT_BYTES_V1, MAX_TOOL_OUTPUT_BYTES_V1,
 };
 pub use transactions::{
     ApprovalBinding, ApprovalGrant, ApprovalPlan, CanonicalTransactionPlan, PackageDelta,
