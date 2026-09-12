@@ -95,6 +95,21 @@ class ProtocolContractTests(unittest.TestCase):
         execute_example = contract["examples"]["install_execute_request"]["approval"]
         self.assertRegex(execute_example["plan_digest"], r"^[a-f0-9]{64}$")
 
+    def test_digest_scope_excludes_timestamp_and_diagnostics(self) -> None:
+        contract = json.loads((PROTOCOL_DIR / "broker-contract.json").read_text())
+        self.assertEqual(
+            contract["digest_scope"]["includes_only"], ["result.canonical_plan"]
+        )
+        excludes = set(contract["digest_scope"]["excludes"])
+        self.assertIn("timestamp", excludes)
+        self.assertIn("result.diagnostics", excludes)
+
+    def test_contract_has_no_client_authorization_surface(self) -> None:
+        contract_text = (PROTOCOL_DIR / "broker-contract.json").read_text()
+        self.assertNotIn("client_approved_authority", contract_text)
+        self.assertNotIn("client_approved", contract_text)
+        self.assertNotIn("execute_shell", contract_text)
+
     def test_broker_contract_external_adapter_mapping_present(self) -> None:
         contract = json.loads((PROTOCOL_DIR / "broker-contract.json").read_text())
         adapter = contract["external_operation_adapter"]
