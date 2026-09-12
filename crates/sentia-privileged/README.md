@@ -200,4 +200,8 @@ An unprivileged attempt to launch the real polkit daemon on a private bus
 exited immediately; no host polkit daemon, policy or privileged state was
 modified. Native APT integration additionally requires its independent worker
 to exclude the differing plan/execute `with_lock` flag from its canonical
-digest, as noted above and reported to that component's owner.
+digest. The worker owner's updated source now places that flag only in
+diagnostics and re-resolves a second time with the native cache locked before
+comparing the execution digest. Its current `broker-contract.json` agrees with
+the broker adapter above. This source-level contract check is not an executed
+root package transaction or a GUI/polkit acceptance result.
