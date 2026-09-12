@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/router/provider-contract-v1.schema.json",
+  "title": "Sentia Provider Capability/Status/Error Contracts v1",
+  "oneOf": [
+    { "$ref": "#/$defs/provider_capabilities" },
+    { "$ref": "#/$defs/provider_status" },
+    { "$ref": "#/$defs/provider_error" }
+  ],
+  "$defs": {
+    "provider_id": { "type": "string", "minLength": 1, "maxLength": 48 },
+    "provider_capability": {
+      "type": "string",
+      "enum": [
+        "inference_text",
+        "inference_structured",
+        "streaming",
+        "cancellation",
+        "consent_preview",
+        "classification"
+      ]
+    },
+    "provider_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "provider_name",
+        "supports_remote_egress",
+        "requires_explicit_consent",
+        "max_input_bytes",
+        "max_output_bytes",
+        "capabilities"
+      ],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/provider_id" },
+        "provider_name": { "type": "string", "maxLength": 64 },
+        "supports_remote_egress": { "type": "boolean" },
+        "requires_explicit_consent": { "type": "boolean" },
+        "max_input_bytes": { "type": "integer", "minimum": 1 },
+        "max_output_bytes": { "type": "integer", "minimum": 1 },
+        "capabilities": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/provider_capability" }
+        }
+      }
+    },
+    "provider_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_id", "health", "state", "checked_at_ms"],
+      "properties": {
+        "provider_id": { "$ref": "#/$defs/provider_id" },
+        "health": {
+          "type": "string",
+          "enum": [
+            "healthy",
+            "degraded",
+            "unavailable",
+            "disabled",
+            "starting"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": ["idle", "warming", "serving", "backoff", "failed"]
+        },
+        "checked_at_ms": { "type": "integer", "minimum": 0 },
+        "message": { "type": "string" },
+        "observed_latency_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "provider_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "provider_id", "retryable", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "network",
+            "dns",
+            "authentication",
+            "quota",
+            "timeout",
+            "unsupported_capability",
+            "malformed_response",
+            "process_failure",
+            "circuit_open",
+            "internal"
+          ]
+        },
+        "provider_id": { "$ref": "#/$defs/provider_id" },
+        "retryable": { "type": "boolean" },
+        "message": { "type": "string" },
+        "upstream_status": { "type": "integer", "minimum": 100, "maximum": 599 }
+      }
+    }
+  }
+}

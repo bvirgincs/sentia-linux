@@ -1,0 +1,470 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/router/router-contract-v1.schema.json",
+  "title": "Sentia Router and JSONL Socket Contract v1",
+  "description": "JSONL-framed request/response/event/cancel contract for protected Unix sockets.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/request_frame" },
+    { "$ref": "#/$defs/event_frame" },
+    { "$ref": "#/$defs/result_frame" },
+    { "$ref": "#/$defs/error_frame" },
+    { "$ref": "#/$defs/cancel_frame" },
+    { "$ref": "#/$defs/cancel_ack_frame" },
+    { "$ref": "#/$defs/tool_request_frame" },
+    { "$ref": "#/$defs/tool_result_frame" }
+  ],
+  "$defs": {
+    "bounded_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "protocol_version": {
+      "type": "string",
+      "const": "sentia.v1"
+    },
+    "routing_policy": {
+      "type": "string",
+      "enum": [
+        "LOCAL_ONLY",
+        "LOCAL_PREFERRED",
+        "REMOTE_PREFERRED",
+        "ASK_BEFORE_REMOTE"
+      ]
+    },
+    "router_capability": {
+      "type": "string",
+      "enum": [
+        "inference",
+        "tooling",
+        "package_planning",
+        "health",
+        "retrieval",
+        "intent_classification"
+      ]
+    },
+    "data_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "sensitivity",
+        "redaction_applied",
+        "origin_label"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "user_input",
+            "terminal_output",
+            "file_snippet",
+            "system_tool",
+            "provider_response"
+          ]
+        },
+        "sensitivity": {
+          "type": "string",
+          "enum": ["public", "internal", "sensitive", "restricted"]
+        },
+        "redaction_applied": { "type": "boolean" },
+        "origin_label": { "type": "string", "maxLength": 128 },
+        "trace_id": { "$ref": "#/$defs/bounded_id" }
+      }
+    },
+    "request_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mime_type", "content", "byte_count", "truncated"],
+      "properties": {
+        "mime_type": { "type": "string", "maxLength": 64 },
+        "content": { "type": "string", "maxLength": 262144 },
+        "byte_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144
+        },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "consent_token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token_id",
+        "payload_sha256",
+        "issued_at_ms",
+        "expires_at_ms"
+      ],
+      "properties": {
+        "token_id": { "$ref": "#/$defs/bounded_id" },
+        "payload_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provider_id": { "type": "string", "maxLength": 48 },
+        "issued_at_ms": { "type": "integer", "minimum": 0 },
+        "expires_at_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "router_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "request_id",
+        "session_id",
+        "created_at_ms",
+        "capability",
+        "policy",
+        "provenance",
+        "payload"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "request_id": { "$ref": "#/$defs/bounded_id" },
+        "session_id": { "$ref": "#/$defs/bounded_id" },
+        "created_at_ms": { "type": "integer", "minimum": 0 },
+        "capability": { "$ref": "#/$defs/router_capability" },
+        "policy": { "$ref": "#/$defs/routing_policy" },
+        "provider_id": { "type": "string", "maxLength": 48 },
+        "provenance": { "$ref": "#/$defs/data_provenance" },
+        "payload": { "$ref": "#/$defs/request_payload" },
+        "consent_token": { "$ref": "#/$defs/consent_token" }
+      }
+    },
+    "request_status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "queued",
+        "awaiting_consent",
+        "running_local",
+        "running_remote",
+        "fallback_to_local",
+        "completed",
+        "failed",
+        "cancel_requested",
+        "cancelled"
+      ]
+    },
+    "provider_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_id", "health", "state", "checked_at_ms"],
+      "properties": {
+        "provider_id": { "type": "string", "maxLength": 48 },
+        "health": {
+          "type": "string",
+          "enum": [
+            "healthy",
+            "degraded",
+            "unavailable",
+            "disabled",
+            "starting"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": ["idle", "warming", "serving", "backoff", "failed"]
+        },
+        "checked_at_ms": { "type": "integer", "minimum": 0 },
+        "message": { "type": "string" },
+        "observed_latency_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "result_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mime_type", "content", "byte_count", "truncated"],
+      "properties": {
+        "mime_type": { "type": "string", "maxLength": 64 },
+        "content": { "type": "string", "maxLength": 262144 },
+        "byte_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144
+        },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "contract_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "invalid_request",
+            "unsupported_version",
+            "permission_denied",
+            "policy_denied",
+            "payload_too_large",
+            "timeout",
+            "cancelled",
+            "provider_unavailable",
+            "tool_unavailable",
+            "validation_failed",
+            "internal"
+          ]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "details": { "type": "object" }
+      }
+    },
+    "router_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "request_id", "status"],
+      "properties": {
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "request_id": { "$ref": "#/$defs/bounded_id" },
+        "status": { "$ref": "#/$defs/request_status" },
+        "provider_status": { "$ref": "#/$defs/provider_status" },
+        "payload": { "$ref": "#/$defs/result_payload" },
+        "error": { "$ref": "#/$defs/contract_error" },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "unit", "value", "observed_at_ms"],
+            "properties": {
+              "name": { "type": "string", "maxLength": 64 },
+              "unit": {
+                "type": "string",
+                "enum": ["count", "milliseconds", "bytes", "percent"]
+              },
+              "value": { "type": "number" },
+              "observed_at_ms": { "type": "integer", "minimum": 0 },
+              "component": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "stream_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "request_id",
+        "sequence",
+        "status",
+        "emitted_at_ms",
+        "payload"
+      ],
+      "properties": {
+        "event_id": { "$ref": "#/$defs/bounded_id" },
+        "request_id": { "$ref": "#/$defs/bounded_id" },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "status": { "$ref": "#/$defs/request_status" },
+        "emitted_at_ms": { "type": "integer", "minimum": 0 },
+        "payload": {
+          "type": "object",
+          "oneOf": [
+            {
+              "required": ["event_type", "from", "to"],
+              "properties": {
+                "event_type": { "const": "state_transition" },
+                "from": { "$ref": "#/$defs/request_status" },
+                "to": { "$ref": "#/$defs/request_status" }
+              }
+            },
+            {
+              "required": ["event_type", "delta", "cumulative_bytes"],
+              "properties": {
+                "event_type": { "const": "output_delta" },
+                "delta": { "type": "string", "maxLength": 8192 },
+                "cumulative_bytes": { "type": "integer", "minimum": 0 }
+              }
+            },
+            {
+              "required": ["event_type", "provider_status"],
+              "properties": {
+                "event_type": { "const": "provider_status" },
+                "provider_status": { "$ref": "#/$defs/provider_status" }
+              }
+            },
+            {
+              "required": ["event_type", "tool", "phase"],
+              "properties": {
+                "event_type": { "const": "tool_progress" },
+                "tool": { "type": "string", "maxLength": 64 },
+                "phase": {
+                  "type": "string",
+                  "enum": [
+                    "queued",
+                    "validating",
+                    "running",
+                    "verifying",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                "detail": { "type": "string" }
+              }
+            },
+            {
+              "required": ["event_type", "final_status"],
+              "properties": {
+                "event_type": { "const": "terminal" },
+                "final_status": { "$ref": "#/$defs/request_status" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "cancel_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cancel_id", "request_id", "reason", "requested_at_ms"],
+      "properties": {
+        "cancel_id": { "$ref": "#/$defs/bounded_id" },
+        "request_id": { "$ref": "#/$defs/bounded_id" },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "user_requested",
+            "timeout",
+            "client_disconnect",
+            "service_shutdown"
+          ]
+        },
+        "requested_at_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cancel_ack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cancel_id",
+        "request_id",
+        "accepted",
+        "final_status"
+      ],
+      "properties": {
+        "cancel_id": { "$ref": "#/$defs/bounded_id" },
+        "request_id": { "$ref": "#/$defs/bounded_id" },
+        "accepted": { "type": "boolean" },
+        "final_status": { "$ref": "#/$defs/request_status" },
+        "message": { "type": "string" }
+      }
+    },
+    "request_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_type", "version", "frame_id", "stream_id", "request"],
+      "properties": {
+        "frame_type": { "const": "request" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "request": { "$ref": "#/$defs/router_request" }
+      }
+    },
+    "event_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_type", "version", "frame_id", "stream_id", "event"],
+      "properties": {
+        "frame_type": { "const": "event" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "event": { "$ref": "#/$defs/stream_event" }
+      }
+    },
+    "result_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_type", "version", "frame_id", "stream_id", "result"],
+      "properties": {
+        "frame_type": { "const": "result" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "result": { "$ref": "#/$defs/router_result" }
+      }
+    },
+    "error_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_type", "version", "frame_id", "stream_id", "error"],
+      "properties": {
+        "frame_type": { "const": "error" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "error": { "$ref": "#/$defs/contract_error" }
+      }
+    },
+    "cancel_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_type", "version", "frame_id", "stream_id", "cancel"],
+      "properties": {
+        "frame_type": { "const": "cancel" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "cancel": { "$ref": "#/$defs/cancel_request" }
+      }
+    },
+    "cancel_ack_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_type", "version", "frame_id", "stream_id", "cancel_ack"],
+      "properties": {
+        "frame_type": { "const": "cancel_ack" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "cancel_ack": { "$ref": "#/$defs/cancel_ack" }
+      }
+    },
+    "tool_request_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame_type",
+        "version",
+        "frame_id",
+        "stream_id",
+        "tool_request"
+      ],
+      "properties": {
+        "frame_type": { "const": "tool_request" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "tool_request": {
+          "$ref": "../tools/tool-invocation-v1.schema.json#/$defs/tool_request"
+        }
+      }
+    },
+    "tool_result_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame_type",
+        "version",
+        "frame_id",
+        "stream_id",
+        "tool_result"
+      ],
+      "properties": {
+        "frame_type": { "const": "tool_result" },
+        "version": { "$ref": "#/$defs/protocol_version" },
+        "frame_id": { "$ref": "#/$defs/bounded_id" },
+        "stream_id": { "$ref": "#/$defs/bounded_id" },
+        "tool_result": {
+          "$ref": "../tools/tool-invocation-v1.schema.json#/$defs/tool_result"
+        }
+      }
+    }
+  }
+}

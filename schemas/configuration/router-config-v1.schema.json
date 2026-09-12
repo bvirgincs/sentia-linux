@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/configuration/router-config-v1.schema.json",
+  "title": "Sentia Router Config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "socket_path",
+    "default_policy",
+    "allow_remote_providers",
+    "max_in_flight_requests",
+    "max_queue_depth",
+    "max_payload_bytes",
+    "max_stream_event_bytes",
+    "allowed_provider_ids",
+    "integration_sockets"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "sentia.v1"
+    },
+    "socket_path": {
+      "type": "string",
+      "pattern": "^(\\$XDG_RUNTIME_DIR|/run/user/[0-9]+)/sentia/router\\.sock$"
+    },
+    "default_policy": {
+      "type": "string",
+      "enum": [
+        "LOCAL_ONLY",
+        "LOCAL_PREFERRED",
+        "REMOTE_PREFERRED",
+        "ASK_BEFORE_REMOTE"
+      ]
+    },
+    "allow_remote_providers": { "type": "boolean" },
+    "max_in_flight_requests": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "max_queue_depth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+    },
+    "max_payload_bytes": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 262144
+    },
+    "max_stream_event_bytes": {
+      "type": "integer",
+      "minimum": 256,
+      "maximum": 262144
+    },
+    "allowed_provider_ids": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 48
+      }
+    },
+    "integration_sockets": { "$ref": "#/$defs/integration_sockets" }
+  },
+  "$defs": {
+    "socket_mode": {
+      "type": "string",
+      "pattern": "^0[0-7]{3}$"
+    },
+    "socket_role": {
+      "type": "string",
+      "enum": [
+        "inference_private",
+        "local_broker",
+        "health_metrics",
+        "user_router"
+      ]
+    },
+    "socket_scope": {
+      "type": "string",
+      "enum": ["private_system", "local_multi_user", "per_user"]
+    },
+    "socket_endpoint_base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "access_scope",
+        "path",
+        "directory_mode_octal",
+        "socket_mode_octal",
+        "require_peer_uid_check",
+        "enforce_peer_uid_quotas",
+        "nonsecret_metrics_only",
+        "allow_cross_user_journal_access",
+        "privileged_mutation_authority"
+      ],
+      "properties": {
+        "role": { "$ref": "#/$defs/socket_role" },
+        "access_scope": { "$ref": "#/$defs/socket_scope" },
+        "path": { "type": "string", "maxLength": 256 },
+        "owner_user": { "type": "string", "maxLength": 64 },
+        "directory_mode_octal": { "$ref": "#/$defs/socket_mode" },
+        "socket_mode_octal": { "$ref": "#/$defs/socket_mode" },
+        "require_peer_uid_check": { "type": "boolean" },
+        "enforce_peer_uid_quotas": { "type": "boolean" },
+        "nonsecret_metrics_only": { "type": "boolean" },
+        "allow_cross_user_journal_access": { "type": "boolean" },
+        "privileged_mutation_authority": { "type": "boolean", "const": false },
+        "deviation_reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "inference_endpoint": {
+      "allOf": [
+        { "$ref": "#/$defs/socket_endpoint_base" },
+        {
+          "required": ["owner_user"],
+          "properties": {
+            "role": { "const": "inference_private" },
+            "access_scope": { "const": "private_system" },
+            "require_peer_uid_check": { "const": true }
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "path": { "const": "/run/sentia-inference/llama.sock" },
+                "owner_user": { "const": "sentia-inference" },
+                "directory_mode_octal": { "const": "0700" }
+              }
+            },
+            { "required": ["deviation_reason"] }
+          ]
+        }
+      ]
+    },
+    "local_broker_endpoint": {
+      "allOf": [
+        { "$ref": "#/$defs/socket_endpoint_base" },
+        {
+          "properties": {
+            "role": { "const": "local_broker" },
+            "access_scope": { "const": "local_multi_user" },
+            "require_peer_uid_check": { "const": true },
+            "enforce_peer_uid_quotas": { "const": true }
+          }
+        },
+        {
+          "anyOf": [
+            { "properties": { "path": { "const": "/run/sentia-local/broker.sock" } } },
+            { "required": ["deviation_reason"] }
+          ]
+        }
+      ]
+    },
+    "health_metrics_endpoint": {
+      "allOf": [
+        { "$ref": "#/$defs/socket_endpoint_base" },
+        {
+          "properties": {
+            "role": { "const": "health_metrics" },
+            "access_scope": { "const": "local_multi_user" },
+            "nonsecret_metrics_only": { "const": true },
+            "allow_cross_user_journal_access": { "const": false }
+          }
+        },
+        {
+          "anyOf": [
+            { "properties": { "path": { "const": "/run/sentia-health/metrics.sock" } } },
+            { "required": ["deviation_reason"] }
+          ]
+        }
+      ]
+    },
+    "user_router_endpoint": {
+      "allOf": [
+        { "$ref": "#/$defs/socket_endpoint_base" },
+        {
+          "properties": {
+            "role": { "const": "user_router" },
+            "access_scope": { "const": "per_user" },
+            "path": {
+              "pattern": "^(\\$XDG_RUNTIME_DIR|/run/user/[0-9]+)/sentia/router\\.sock$"
+            },
+            "socket_mode_octal": { "const": "0600" },
+            "require_peer_uid_check": { "const": true }
+          }
+        },
+        {
+          "anyOf": [
+            { "properties": { "socket_mode_octal": { "const": "0600" } } },
+            { "required": ["deviation_reason"] }
+          ]
+        }
+      ]
+    },
+    "integration_sockets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inference", "local_broker", "health_metrics", "user_router"],
+      "properties": {
+        "inference": { "$ref": "#/$defs/inference_endpoint" },
+        "local_broker": { "$ref": "#/$defs/local_broker_endpoint" },
+        "health_metrics": { "$ref": "#/$defs/health_metrics_endpoint" },
+        "user_router": { "$ref": "#/$defs/user_router_endpoint" }
+      }
+    }
+  }
+}

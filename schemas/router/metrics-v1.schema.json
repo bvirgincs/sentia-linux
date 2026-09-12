@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentia.local/schemas/router/metrics-v1.schema.json",
+  "title": "Sentia Router Metrics v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "queue_depth",
+    "fallback_count",
+    "cancellation_count",
+    "payload_input_bytes",
+    "payload_output_bytes",
+    "samples"
+  ],
+  "properties": {
+    "request_id": { "type": "string", "maxLength": 64 },
+    "queue_depth": { "type": "integer", "minimum": 0 },
+    "local_latency_ms": { "type": "number", "minimum": 0 },
+    "remote_latency_ms": { "type": "number", "minimum": 0 },
+    "fallback_count": { "type": "integer", "minimum": 0 },
+    "cancellation_count": { "type": "integer", "minimum": 0 },
+    "payload_input_bytes": { "type": "integer", "minimum": 0 },
+    "payload_output_bytes": { "type": "integer", "minimum": 0 },
+    "samples": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "unit", "value", "observed_at_ms"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 64 },
+          "unit": {
+            "type": "string",
+            "enum": ["count", "milliseconds", "bytes", "percent"]
+          },
+          "value": { "type": "number" },
+          "observed_at_ms": { "type": "integer", "minimum": 0 },
+          "component": { "type": "string" }
+        }
+      }
+    }
+  }
+}
