@@ -13,6 +13,14 @@ if grep -q 'sources-media' "$cfg/calamares/settings.conf"; then
     exit 1
 fi
 
+# calamares-bootloader-config runs update-grub, which needs /boot/grub from
+# grub-install and /etc/default/grub from grubcfg, so it must follow both.
+order="$(grep -n -E '^ +- (grubcfg|bootloader|bootloader-config)$' "$cfg/calamares/settings.conf" | sed 's/.*- //' | tr '\n' ' ')"
+if [ "$order" != "grubcfg bootloader bootloader-config " ]; then
+    echo "unexpected bootloader module order: $order" >&2
+    exit 1
+fi
+
 grep -q 'requiredPartitionTableType: gpt' "$cfg/calamares/modules/partition.conf"
 grep -q 'defaultFileSystemType: "ext4"' "$cfg/calamares/modules/partition.conf"
 grep -q 'userSwapChoices:' "$cfg/calamares/modules/partition.conf"

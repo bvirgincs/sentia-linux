@@ -402,6 +402,13 @@ def start_installer_session(args: argparse.Namespace, run_dir: Path):
             raise ProbeError("the live user never got an active session")
         screen.shot("desktop")
 
+        setup = getattr(args, "guest_setup_command", "")
+        if setup:
+            # Debug/fault-injection hook. Announced loudly because anything it
+            # changes means the run no longer tests the shipped image.
+            print(f"guest-setup: {setup}", flush=True)
+            print(f"guest-setup output: {guest.run(setup, timeout=300)}", flush=True)
+
         # Run the shipped wrapper, not calamares directly, so the fstab
         # handling it performs is part of what is being tested. pkexec is the
         # only thing replaced: it needs an interactive agent.
@@ -526,6 +533,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cpus", type=int, default=4)
     # Calamares requires 20 GiB and the unpacked image is about 6 GiB.
     parser.add_argument("--disk-gb", type=int, default=30)
+    parser.add_argument(
+        "--guest-setup-command",
+        default="",
+        help="shell command run in the live guest before Calamares starts,"
+        " for debugging and fault injection; using it means the run no longer"
+        " tests the shipped image",
+    )
     parser.add_argument("--memory-mb", type=int, default=8192)
     parser.add_argument("--boot-timeout", type=float, default=600.0)
     parser.add_argument("--desktop-timeout", type=float, default=600.0)
