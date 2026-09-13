@@ -14,6 +14,17 @@ export PAGER=cat
 export SYSTEMD_COLORS=0
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# The installed account is an ordinary sudo-group user, so sudo asks for a
+# password. The probe passes the disposable VM password in the environment; it
+# exists only on the check ISO and never inside Sentia.
+sudo_run() {
+  if [[ -n "${SENTIA_TEST_PASSWORD:-}" ]]; then
+    printf '%s\n' "${SENTIA_TEST_PASSWORD}" | sudo -S -p '' "$@"
+  else
+    sudo -n "$@"
+  fi
+}
+
 check() {
   local id="$1" detail="$2" status="$3"
   printf 'CHECK %s %s %s\n' "${id}" "${status}" "${detail//$'\n'/ | }"
@@ -149,7 +160,7 @@ else
 fi
 
 # DISK-APT-OFFLINE-ARCHIVE: the installed local archive must still verify.
-apt_update="$(sudo -n apt-get update -o Dir::Etc::sourcelist=/dev/null \
+apt_update="$(sudo_run apt-get update -o Dir::Etc::sourcelist=/dev/null \
   -o Dir::Etc::sourceparts=/etc/apt/sources.list.d 2>&1 | tail -n 5 || true)"
 if grep -q 'sentia' <<<"${apt_update}" && ! grep -qi 'NO_PUBKEY\|not signed' <<<"${apt_update}"; then
   check DISK-APT-SENTIA-VERIFIES "${apt_update}" PASS
@@ -221,7 +232,7 @@ fi
 
 # DISK-OFFLINE-ANSWER: take the network down and require a real local answer.
 for iface in $(ls /sys/class/net | grep -v '^lo$'); do
-  sudo -n ip link set "${iface}" down 2>/dev/null || true
+  sudo_run ip link set "${iface}" down 2>/dev/null || true
 done
 offline_output="$(timeout 900 ai --policy LOCAL_ONLY \
   'name the command that lists open files' 2>&1)"
@@ -240,7 +251,7 @@ else
 fi
 
 for iface in $(ls /sys/class/net | grep -v '^lo$'); do
-  sudo -n ip link set "${iface}" up 2>/dev/null || true
+  sudo_run ip link set "${iface}" up 2>/dev/null || true
 done
 
 echo "SENTIA_CHECKS_COMPLETE"

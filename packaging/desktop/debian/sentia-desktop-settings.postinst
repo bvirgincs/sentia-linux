@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # xfdesktop and other Debian desktop components fall back to the
+        # desktop-background alternative when no per-monitor backdrop is set,
+        # which is why a Sentia install still showed Debian artwork. Registering
+        # the Sentia wallpaper as a higher-priority provider is the Debian way
+        # to change that default without touching desktop-base's files.
+        update-alternatives --install \
+            /usr/share/images/desktop-base/desktop-background desktop-background \
+            /usr/share/backgrounds/sentia/sentia-wallpaper.svg 500
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

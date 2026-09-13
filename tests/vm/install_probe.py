@@ -498,7 +498,10 @@ def installed_boot_phase(args: argparse.Namespace, run_dir: Path, disk: Path) ->
             "sudo -n mount -o ro -L SENTIACHECK /mnt/sentia-checks "
             "|| sudo -n mount -o ro /dev/sr0 /mnt/sentia-checks"
         )
-        session.send("bash /mnt/sentia-checks/checks.sh")
+        session.send(
+            f"SENTIA_TEST_PASSWORD={INSTALLED_PASSWORD} "
+            "bash /mnt/sentia-checks/checks.sh"
+        )
         if not session.wait_for("SENTIA_CHECKS_COMPLETE", args.check_timeout):
             raise ProbeError("the installed-system checks did not complete")
         session.pump(2)
