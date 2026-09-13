@@ -89,16 +89,17 @@ class Screen:
                 ]
             },
         )
-        time.sleep(0.2)
-        self._qmp.execute(
-            "input-send-event",
-            {
-                "events": [
-                    {"type": "btn", "data": {"down": True, "button": "left"}},
-                    {"type": "btn", "data": {"down": False, "button": "left"}},
-                ]
-            },
-        )
+        time.sleep(0.3)
+        # Press and release have to be separate events with time between them.
+        # Sent as one batch they reach the guest in the same input frame: a
+        # combo box still opens, because that happens on press, but a push
+        # button never completes a click and Calamares sat on its first page.
+        for down in (True, False):
+            self._qmp.execute(
+                "input-send-event",
+                {"events": [{"type": "btn", "data": {"down": down, "button": "left"}}]},
+            )
+            time.sleep(0.2)
         time.sleep(0.4)
 
 
