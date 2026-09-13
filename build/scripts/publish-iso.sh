@@ -49,18 +49,26 @@ prerelease_flag="--prerelease"
 [[ "${SENTIA_RELEASE_FINAL:-0}" == "1" ]] && prerelease_flag=""
 
 publish_release() {
-  local tag="$1" dir="$2" notes="$3"
-  if gh release view "${tag}" >/dev/null 2>&1; then
-    log "release ${tag} exists; replacing its assets"
-    gh release upload "${tag}" "${dir}"/* --clobber
-  else
-    log "creating release ${tag}"
-    # shellcheck disable=SC2086  # prerelease_flag is intentionally unquoted
-    gh release create "${tag}" "${dir}"/* \
-      --title "Sentia Linux ISO ${tag}" \
-      --notes-file "${notes}" \
-      ${prerelease_flag}
-  fi
+  local tag="$1" dir="$2" notes="$3" attempt
+  # GitHub's release API returns 5xx often enough that a single failure is not
+  # evidence of a real problem, and it sometimes applies the change anyway, so
+  # re-check before retrying rather than assuming the attempt did nothing.
+  for attempt in 1 2 3 4 5; do
+    if gh release view "${tag}" >/dev/null 2>&1; then
+      log "release ${tag} exists; uploading its assets"
+      gh release upload "${tag}" "${dir}"/* --clobber && return 0
+    else
+      log "creating release ${tag} (attempt ${attempt})"
+      # shellcheck disable=SC2086  # prerelease_flag is intentionally unquoted
+      gh release create "${tag}" "${dir}"/* \
+        --title "Sentia Linux ISO ${tag}" \
+        --notes-file "${notes}" \
+        ${prerelease_flag} && return 0
+    fi
+    log "publish attempt ${attempt} failed; retrying"
+    sleep $((attempt * 15))
+  done
+  die "could not publish release ${tag} after 5 attempts"
 }
 
 # Uploading a directory staged elsewhere needs none of the split machinery; the
