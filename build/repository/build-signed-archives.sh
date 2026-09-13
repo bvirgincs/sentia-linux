@@ -42,7 +42,12 @@ for src in "${allowed_sources[@]}"; do
   source_allowed_map["$src"]=1
 done
 
-mapfile -t debs < <(find "$INPUT_DIR" -type f -name '*.deb' | sort)
+# Automatic debug-symbol packages are build artifacts kept for diagnosing
+# crashes on the build host. They are not part of the distributed Sentia
+# overlay, are never referenced by a package list, and would roughly double the
+# archive, so they are excluded here rather than added to the allowlist.
+mapfile -t debs < <(find "$INPUT_DIR" -type f -name '*.deb' \
+  ! -name '*-dbgsym_*.deb' | sort)
 if [[ ${#debs[@]} -eq 0 ]]; then
   echo "no .deb files found under $INPUT_DIR" >&2
   exit 1
