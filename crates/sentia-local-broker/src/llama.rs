@@ -54,7 +54,10 @@ impl LlamaClient {
             )
             .await
             .map_err(io_error)?;
-        let (read, _) = stream.into_split();
+        let (read, write) = stream.into_split();
+        // See chat(): the write half must outlive the response, or the server
+        // sees a half-closed connection and treats the caller as gone.
+        let _write_half = write;
         let mut reader = BufReader::new(read);
         let head = read_head(&mut reader).await.map_err(io_error)?;
         let body = read_body_bounded(&mut reader, &head, MAX_HEALTH_BODY_BYTES)
@@ -126,7 +129,14 @@ impl LlamaClient {
                 stream.write_all(&body).await
             } => result.map_err(io_error)?,
         }
-        let (read, _) = stream.into_split();
+        // Tokio shuts the socket down for writing when an OwnedWriteHalf is
+        // dropped. llama.cpp's HTTP server polls the connection while it
+        // generates and treats that EOF as the client having gone away: it
+        // logged "cancel task" the instant the request arrived and closed the
+        // response, which reached the user as a truncated stream. The write
+        // half must therefore stay alive until the whole response is read.
+        let (read, write) = stream.into_split();
+        let _write_half = write;
         let mut reader = BufReader::new(read);
         let head = tokio::select! {
             _ = cancellation.cancelled() => return Err(cancelled()),
@@ -846,7 +856,7 @@ fn cancelled() -> LlamaError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::os::unix::fs::PermissionsExt;
+    use std::{os::unix::fs::PermissionsExt, time::Duration};
     use tokio::net::UnixListener;
 
     #[test]
@@ -916,6 +926,15 @@ mod tests {
             stream.read_exact(&mut body).await.unwrap();
             let body: Value = serde_json::from_slice(&body).unwrap();
             assert_eq!(body["stream"], true);
+            // The client must not shut the connection down for writing while it
+            // waits for the answer. llama.cpp cancels the generation when it
+            // sees that EOF, so a read here must time out rather than return 0.
+            let mut probe = [0_u8; 1];
+            match timeout(Duration::from_millis(250), stream.read(&mut probe)).await {
+                Err(_) => {}
+                Ok(Ok(0)) => panic!("client half-closed the connection before the response"),
+                Ok(other) => panic!("unexpected read from the client: {other:?}"),
+            }
             let event =
                 b"data: {\"choices\":[{\"delta\":{\"content\":\"hello\"},\"finish_reason\":\"stop\"}]}\n\n";
             let response = format!(
