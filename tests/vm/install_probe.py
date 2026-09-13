@@ -40,6 +40,9 @@ LIVE_USER = "user"
 LIVE_PASSWORD = "live"
 
 # The account the installer creates, used to prove the installed disk logs in.
+# Unpacking a 3.6 GB squashfs is the one genuinely slow module; nothing else
+# should be silent for this long.
+STALL_SECONDS = 900
 INSTALLED_FULL_NAME = "Sentia Test"
 INSTALLED_USER = "sentia"
 INSTALLED_PASSWORD = "sentia-install-test"
@@ -292,6 +295,8 @@ def wait_for_install(guest: Guest, screen: Screen, timeout: float) -> None:
     deadline = time.monotonic() + timeout
     seen_mount = False
     last_shot = 0.0
+    last_progress = ""
+    progress_changed = time.monotonic()
     while time.monotonic() < deadline:
         state = guest.run(
             f"if {mounted}; then echo MOUNTED;"
@@ -317,6 +322,20 @@ def wait_for_install(guest: Guest, screen: Screen, timeout: float) -> None:
             time.sleep(1)
             screen.shot("installing")
             last_shot = time.monotonic()
+            # Report the installer's own view of what it is doing. Without
+            # this, a module that blocks is indistinguishable from one that is
+            # slow until the whole phase times out an hour later.
+            progress = guest.run(f"tail -n 2 {CALAMARES_LOG}", timeout=120)
+            print(f"calamares: {progress}", flush=True)
+            if progress != last_progress:
+                last_progress = progress
+                progress_changed = time.monotonic()
+            elif time.monotonic() - progress_changed > STALL_SECONDS:
+                screen.shot("install-stalled")
+                tail = guest.run(f"tail -n 60 {CALAMARES_LOG}", timeout=180)
+                raise ProbeError(
+                    f"Calamares wrote nothing for {STALL_SECONDS}s:\n" + tail
+                )
         time.sleep(15)
     raise ProbeError(f"the installation did not finish within {timeout}s")
 
