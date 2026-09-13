@@ -136,6 +136,15 @@ class Guest:
         body = body.split(end, 1)[0]
         return body.strip()
 
+    def launch(self, command: str, timeout: float = 60.0) -> str:
+        """Start a background command and return once the shell accepts it.
+
+        A trailing ``&`` cannot simply be followed by ``;`` and the marker echo,
+        because ``& ;`` is a bash syntax error and the end marker would never be
+        printed. Braces make the background command a complete list of its own.
+        """
+        return self.run(f"{{ {command} }}", timeout)
+
     def wait_until(self, command: str, timeout: float, poll: float = 5.0) -> bool:
         """Poll a predicate command until it succeeds."""
         deadline = time.monotonic() + timeout
@@ -345,7 +354,7 @@ def install_phase(args: argparse.Namespace, run_dir: Path, disk: Path) -> dict:
         # Run the shipped wrapper, not calamares directly, so the fstab
         # handling it performs is part of what is being tested. pkexec is the
         # only thing replaced: it needs an interactive agent.
-        guest.run(
+        guest.launch(
             "sudo -n env DISPLAY=:0 "
             f"XAUTHORITY=/home/{LIVE_USER}/.Xauthority "
             "setsid /usr/libexec/sentia-live/run-calamares-root -d "

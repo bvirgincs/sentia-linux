@@ -61,6 +61,14 @@ class GuestShellTests(unittest.TestCase):
         guest = install_probe.Guest(EchoingSession(["YES"]))
         self.assertTrue(guest.wait_until("systemctl is-active graphical.target", 5))
 
+    def test_background_command_is_braced(self):
+        session = EchoingSession(["started"])
+        guest = install_probe.Guest(session)
+        guest.launch("setsid /usr/libexec/sentia-live/run-calamares-root -d &")
+        typed = session.transcript
+        self.assertIn("{ setsid /usr/libexec/sentia-live/run-calamares-root -d & }", typed)
+        self.assertNotIn("& ;", typed)
+
     def test_marker_is_typed_in_two_halves(self):
         typed = install_probe.split_marker("SENTIA_CMD_1_BEGIN")
         self.assertNotIn("SENTIA_CMD_1_BEGIN", typed)
