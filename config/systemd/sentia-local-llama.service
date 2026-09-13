@@ -27,6 +27,7 @@ ExecStart=/usr/bin/llama-server \
   --ctx-size ${SENTIA_CTX_SIZE} \
   --parallel ${SENTIA_N_PARALLEL} \
   --predict ${SENTIA_MAX_PREDICT} \
+  --reasoning ${SENTIA_REASONING} \
   --threads ${SENTIA_THREADS} \
   --threads-batch ${SENTIA_THREADS_BATCH} \
   --threads-http ${SENTIA_THREADS_HTTP} \
