@@ -27,6 +27,13 @@ check() {
   printf 'CHECK %s %s %s\n' "${id}" "${status}" "${detail//$'\n'/ | }"
 }
 
+# The checks run as the unprivileged live user, so anything that inspects a
+# service-private runtime path has to be elevated explicitly. The live user has
+# passwordless sudo; -n keeps a missing rule a failure rather than a hang.
+as_root() {
+  sudo -n "$@"
+}
+
 # LIVE-IDENTITY: the image must identify itself as Sentia, not as Debian.
 os_id="$(. /usr/lib/os-release && printf '%s' "${ID}")"
 os_pretty="$(. /usr/lib/os-release && printf '%s' "${PRETTY_NAME}")"
@@ -241,9 +248,9 @@ fi
 # The mode is asserted, not merely reported: sentia-local-broker refuses to use
 # a runtime socket that is not exactly 0600 in a 0700 directory, so a permissive
 # umask here disables local AI while every unit still reports active.
-if [[ -S "${LLAMA_SOCKET}" ]]; then
-  socket_mode="$(stat -c '%a %U:%G' "${LLAMA_SOCKET}")"
-  directory_mode="$(stat -c '%a %U:%G' "$(dirname "${LLAMA_SOCKET}")")"
+if as_root test -S "${LLAMA_SOCKET}"; then
+  socket_mode="$(as_root stat -c '%a %U:%G' "${LLAMA_SOCKET}")"
+  directory_mode="$(as_root stat -c '%a %U:%G' "$(dirname "${LLAMA_SOCKET}")")"
   if [[ "${socket_mode}" == "600 sentia-inference:sentia-inference" \
      && "${directory_mode}" == "700 sentia-inference:sentia-inference" ]]; then
     check AI-RUNTIME-SOCKET "${socket_mode} in ${directory_mode}" PASS
@@ -267,10 +274,12 @@ fi
 # broken broker or router, which otherwise present the same symptom.
 readiness_report=/var/log/sentia-local-llama/readiness.json
 readiness_result="$(systemctl show sentia-local-llama-readiness.service -p Result --value 2>&1)"
-if [[ "${readiness_result}" == "success" ]] && grep -q '"success":true' "${readiness_report}" 2>/dev/null; then
-  check AI-RUNTIME-READY "$(sed -n 's/.*\("generation_seconds":[0-9]*\).*/\1/p' "${readiness_report}")" PASS
+readiness_json="$(as_root cat "${readiness_report}" 2>&1)"
+if [[ "${readiness_result}" == "success" && "${readiness_json}" == *'"success":true'* ]]; then
+  check AI-RUNTIME-READY "$(printf '%s' "${readiness_json}" |
+    sed -n 's/.*\("generation_seconds":[0-9]*\).*/\1/p')" PASS
 else
-  check AI-RUNTIME-READY "result=${readiness_result} report=$(head -c 300 "${readiness_report}" 2>&1)" FAIL
+  check AI-RUNTIME-READY "result=${readiness_result} report=${readiness_json:0:300}" FAIL
 fi
 
 # AI-BROKER-ACTIVE: the peer-authenticated broker is the only path users get.
@@ -370,6 +379,23 @@ else
   as_ai_user journalctl --user -u sentia-router.service -u sentia-router.socket \
     -b --no-pager -n 60 2>&1 | tail -60 || true
   echo "--- end sentia-router diagnostics ---"
+  # The router now reaches the broker, so a failure here can equally be the
+  # broker, the runtime, or the HTTP stream between them. Show all three from
+  # the same boot: rediagnosing costs a full build and boot cycle.
+  echo "--- sentia local AI backend diagnostics ---"
+  as_root ls -la "$(dirname "${LLAMA_SOCKET}")" 2>&1 | head -10 || true
+  as_root journalctl -u sentia-local-broker.service -b --no-pager -n 40 2>&1 | tail -40 || true
+  as_root journalctl -u sentia-local-llama.service -b --no-pager -n 60 2>&1 | tail -60 || true
+  # A raw streaming request straight to the runtime, bypassing the broker and
+  # the router: if this succeeds the fault is in Sentia's own HTTP handling,
+  # and if it fails the runtime closed the connection itself.
+  echo "--- direct streaming request to the runtime ---"
+  as_root -u sentia-inference timeout 300 curl --silent --show-error --no-buffer \
+    --unix-socket "${LLAMA_SOCKET}" \
+    --header 'Content-Type: application/json' \
+    --data '{"model":"sentia-local","stream":true,"max_tokens":48,"messages":[{"role":"user","content":"name the command that lists open files"}]}' \
+    http://localhost/v1/chat/completions 2>&1 | tail -12 || true
+  echo "--- end sentia local AI backend diagnostics ---"
 fi
 for iface in $(ls /sys/class/net | grep -v '^lo$'); do
   ip link set "${iface}" up 2>/dev/null || true
