@@ -18,8 +18,7 @@ lb config noauto \
   --checksums sha256 \
   --chroot-squashfs-compression-type zstd \
   --chroot-squashfs-compression-level 15 \
-  --hostname sentia \
   --iso-application "Sentia Linux" \
   --iso-publisher "Sentia Linux" \
   --iso-volume "Sentia 0.1 amd64" \
-  --bootappend-live "boot=live components console=tty0 console=ttyS0,115200"
+  --bootappend-live "boot=live components console=tty0 console=ttyS0,115200 live-config.hostname=sentia"
