@@ -13,4 +13,4 @@ usr/lib/*/sentia-llama-cpp/backends/*
 etc/sentia/llama/sentia-local.env
 lib/systemd/system/sentia-local-llama.service
 lib/systemd/system/sentia-local-llama-readiness.service
-usr/lib/sentia/runtime/probe_llama_runtime.py
+usr/lib/sentia/runtime/probe_llama_runtime.sh

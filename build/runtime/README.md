@@ -15,7 +15,7 @@ Sentia runtime ownership.
   under `/home/ubuntu/sentia-linux/.build/runtime/llama-cpp/src`.
 - `build_llama_deb.sh` – builds `sentia-llama-cpp` with heavy lock + `-j2`.
 - `build_granite_model_deb.sh` – builds a binary `sentia-granite-model` `.deb`.
-- `probe_llama_runtime.py` – health/readiness + generation probe over Unix socket.
+- `probe_llama_runtime.sh` – health/readiness + generation probe over Unix socket.
 
 ## Toolchain expectations
 

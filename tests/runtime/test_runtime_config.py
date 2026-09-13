@@ -62,7 +62,7 @@ class RuntimeConfigTests(unittest.TestCase):
     def test_readiness_probe_uses_unix_socket(self) -> None:
         text = READINESS.read_text(encoding="utf-8")
         self.assertIn("--socket ${SENTIA_SOCKET_PATH}", text)
-        self.assertIn("/usr/lib/sentia/runtime/probe_llama_runtime.py", text)
+        self.assertIn("/usr/lib/sentia/runtime/probe_llama_runtime.sh", text)
 
 
 if __name__ == "__main__":

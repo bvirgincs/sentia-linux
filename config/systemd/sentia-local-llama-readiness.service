@@ -2,7 +2,7 @@
 Description=Sentia local llama.cpp readiness probe (health + generation)
 After=sentia-local-llama.service
 Requires=sentia-local-llama.service
-ConditionPathExists=/usr/lib/sentia/runtime/probe_llama_runtime.py
+ConditionPathExists=/usr/lib/sentia/runtime/probe_llama_runtime.sh
 ConditionPathExists=/etc/sentia/llama/sentia-local.env
 
 [Service]
@@ -10,11 +10,15 @@ Type=oneshot
 User=sentia-inference
 Group=sentia-inference
 EnvironmentFile=-/etc/sentia/llama/sentia-local.env
-ExecStart=/usr/lib/sentia/runtime/probe_llama_runtime.py \
+ExecStart=/usr/lib/sentia/runtime/probe_llama_runtime.sh \
   --socket ${SENTIA_SOCKET_PATH} \
   --max-wait-seconds 240 \
   --n-predict 16 \
   --report-path /var/log/sentia-local-llama/readiness.json
+# The probe writes its report here. Without this the unit failed at the very
+# last step, under ProtectSystem=strict, after a successful generation.
+LogsDirectory=sentia-local-llama
+LogsDirectoryMode=0750
 NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateNetwork=yes

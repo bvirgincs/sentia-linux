@@ -80,4 +80,4 @@ override_dh_auto_install:
 	install -D -m 0644 config/llama/sentia-local.env debian/tmp/etc/sentia/llama/sentia-local.env
 	install -D -m 0644 config/systemd/sentia-local-llama.service debian/tmp/lib/systemd/system/sentia-local-llama.service
 	install -D -m 0644 config/systemd/sentia-local-llama-readiness.service debian/tmp/lib/systemd/system/sentia-local-llama-readiness.service
-	install -D -m 0755 build/runtime/probe_llama_runtime.py debian/tmp/usr/lib/sentia/runtime/probe_llama_runtime.py
+	install -D -m 0755 build/runtime/probe_llama_runtime.sh debian/tmp/usr/lib/sentia/runtime/probe_llama_runtime.sh

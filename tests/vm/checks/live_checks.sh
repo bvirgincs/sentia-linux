@@ -77,6 +77,14 @@ if [[ -z "${failed_units// /}" ]]; then
   check LIVE-NO-FAILED-UNITS "none" PASS
 else
   check LIVE-NO-FAILED-UNITS "${failed_units}" FAIL
+  # Diagnostic noise, not a result line: a failed unit is useless without the
+  # reason, and re-running the whole probe to learn it costs a full boot.
+  for unit in ${failed_units}; do
+    echo "--- diagnostics for ${unit} ---"
+    systemctl status --no-pager --full --lines=0 "${unit}" 2>&1 | head -n 12
+    journalctl --no-pager --no-hostname -u "${unit}" --lines=40 2>&1 | tail -n 40
+    echo "--- end diagnostics for ${unit} ---"
+  done
 fi
 
 # LIVE-GRAPHICAL: graphical.target is the real gate, not a console message.
@@ -268,12 +276,24 @@ for iface in $(ls /sys/class/net | grep -v '^lo$'); do
   ip link set "${iface}" down 2>/dev/null || true
 done
 ai_user="${SENTIA_TEST_USER:-user}"
-ai_output="$(runuser -u "${ai_user}" -- env XDG_RUNTIME_DIR="/run/user/$(id -u "${ai_user}")" \
-  timeout 600 ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1 || true)"
-if [[ -n "${ai_output//[[:space:]]/}" ]] && ! grep -qiE 'error|refused|unavailable|not found' <<<"${ai_output}"; then
+ai_uid="$(id -u "${ai_user}")"
+# This script runs as the live user over the serial console, so runuser is not
+# available to it; sudo is the path live-config grants. The exit status is the
+# result, not a keyword search of the output: an earlier version accepted
+# "runuser: may not be used by non-root users" as an answer.
+if [[ "$(id -u)" == "${ai_uid}" ]]; then
+  ai_output="$(XDG_RUNTIME_DIR="/run/user/${ai_uid}" timeout 600 \
+    ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1)"
+  ai_status=$?
+else
+  ai_output="$(sudo -n -u "${ai_user}" env XDG_RUNTIME_DIR="/run/user/${ai_uid}" timeout 600 \
+    ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1)"
+  ai_status=$?
+fi
+if [[ "${ai_status}" -eq 0 && -n "${ai_output//[[:space:]]/}" ]]; then
   check AI-OFFLINE-ANSWER "${ai_output:0:300}" PASS
 else
-  check AI-OFFLINE-ANSWER "${ai_output:0:300}" FAIL
+  check AI-OFFLINE-ANSWER "status=${ai_status} ${ai_output:0:300}" FAIL
 fi
 for iface in $(ls /sys/class/net | grep -v '^lo$'); do
   ip link set "${iface}" up 2>/dev/null || true
