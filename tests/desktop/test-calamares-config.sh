@@ -27,7 +27,7 @@ grep -q 'userSwapChoices:' "$cfg/calamares/modules/partition.conf"
 grep -q '  - file' "$cfg/calamares/modules/partition.conf"
 
 grep -q 'efiBootloaderId: "debian"' "$cfg/calamares/modules/bootloader.conf"
-grep -q 'efiBootLoader: "sb-shim"' "$cfg/calamares/modules/bootloader.conf"
+grep -q '^efiBootLoader: "grub"' "$cfg/calamares/modules/bootloader.conf"
 
 grep -q 'source: "/run/live/medium/live/filesystem.squashfs"' "$cfg/calamares/modules/unpackfs.conf"
 grep -q 'Sentia installation requires UEFI boot mode' "$cfg/helpers/calamares-bootloader-config"
