@@ -310,6 +310,11 @@ def wait_for_install(guest: Guest, screen: Screen, timeout: float) -> None:
                 "Calamares exited before the installation completed:\n" + tail
             )
         if time.monotonic() - last_shot > 180:
+            # X blanks the screen a few minutes after the last input, and the
+            # exec phase needs none, so progress screenshots came back solid
+            # black. A bare shift wakes the display without reaching Calamares.
+            screen.key("shift")
+            time.sleep(1)
             screen.shot("installing")
             last_shot = time.monotonic()
         time.sleep(15)
