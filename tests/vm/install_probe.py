@@ -305,7 +305,23 @@ def wait_for_install(guest: Guest, screen: Screen, timeout: float) -> None:
     raise ProbeError(f"the installation did not finish within {timeout}s")
 
 
-def install_phase(args: argparse.Namespace, run_dir: Path, disk: Path) -> dict:
+def create_disk(disk: Path, disk_gb: int) -> None:
+    subprocess.run(
+        ["qemu-img", "create", "-f", "qcow2", str(disk), f"{disk_gb}G"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+
+
+def start_installer_session(args: argparse.Namespace, run_dir: Path):
+    """Boot the live ISO and leave Calamares on screen, driven by nothing yet.
+
+    Shared with install_console.py so the console tunes the exact environment
+    the probe installs in.
+    """
+    disk = Path(getattr(args, "disk", "") or (run_dir / "sentia-installed.qcow2"))
+    if not disk.exists():
+        create_disk(disk, args.disk_gb)
     ovmf_code = first_existing(OVMF_CODE_CANDIDATES, "OVMF firmware code image")
     ovmf_vars = first_existing(OVMF_VARS_CANDIDATES, "OVMF variable store template")
     vars_copy = run_dir / "OVMF_VARS_install.fd"
@@ -363,7 +379,20 @@ def install_phase(args: argparse.Namespace, run_dir: Path, disk: Path) -> dict:
         if not guest.wait_until(f"grep -qa 'Calamares' {CALAMARES_LOG}", 180):
             raise ProbeError("Calamares did not start")
         time.sleep(15)
+    except BaseException:
+        session.close()
+        stop_qemu(process, server, serial_socket)
+        qmp_socket.unlink(missing_ok=True)
+        raise
+    return process, server, session, guest, screen
 
+
+def install_phase(args: argparse.Namespace, run_dir: Path, disk: Path) -> dict:
+    args.disk = disk
+    serial_socket = run_dir / "install-serial.sock"
+    qmp_socket = run_dir / "install-qmp.sock"
+    process, server, session, guest, screen = start_installer_session(args, run_dir)
+    try:
         drive_calamares(screen, guest, args)
         wait_for_install(guest, screen, args.install_timeout)
 
@@ -494,11 +523,7 @@ def main() -> int:
     args.iso = str(iso)
 
     disk = run_dir / "sentia-installed.qcow2"
-    subprocess.run(
-        ["qemu-img", "create", "-f", "qcow2", str(disk), f"{args.disk_gb}G"],
-        check=True,
-        stdout=subprocess.DEVNULL,
-    )
+    create_disk(disk, args.disk_gb)
 
     report: dict = {"iso": str(iso), "disk_gb": args.disk_gb, "error": None}
     try:
