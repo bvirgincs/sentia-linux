@@ -223,50 +223,60 @@ def serial_login(session: SerialSession, timeout: float) -> None:
         raise ProbeError("serial login did not produce a shell prompt")
 
 
+def fill(screen, x: int, y: int, value: str, args: argparse.Namespace) -> None:
+    """Replace a line edit's contents, whatever Calamares put there first.
+
+    The login and hostname fields are derived from the full name as it is
+    typed, so they have to be cleared before they are set. There is no ctrl
+    modifier in the harness's key vocabulary, so the caret is sent to the end
+    and the field is erased one character at a time.
+    """
+    screen.click(x, y, args.width, args.height)
+    screen.key("end")
+    screen.key("backspace", repeat=48)
+    screen.text(value)
+    time.sleep(0.5)
+
+
 def drive_calamares(screen: Screen, guest: Guest, args: argparse.Namespace) -> None:
-    """Walk the six Calamares pages, then wait out the exec phase."""
+    """Walk the six Calamares pages, then leave the exec phase running.
+
+    Every coordinate here was read off a screenshot of this installer at
+    1024x768 with install_console.py. Calamares has no automation interface, so
+    a wrong coordinate is only visible as a page that never advances.
+    """
     width, height = args.width, args.height
 
     screen.shot("welcome")
-    # Every page but the partition page accepts the default and advances on the
-    # Next button, which Calamares makes the default button.
-    for page in ("locale", "keyboard", "partition"):
+    # Welcome, Location and Keyboard accept their defaults: American English,
+    # the timezone the map picks, and a generic 105-key US layout.
+    for page in ("location", "keyboard", "partition"):
         screen.click(args.next_x, args.next_y, width, height)
-        time.sleep(3)
+        time.sleep(4)
         screen.shot(page)
 
-    # The partition page deliberately preselects nothing, so the erase-disk
-    # choice has to be made before Next becomes usable.
+    # The partition page preselects nothing and keeps Next disabled until one
+    # of Erase disk and Manual partitioning is chosen.
     screen.click(args.erase_x, args.erase_y, width, height)
-    time.sleep(2)
+    time.sleep(3)
     screen.shot("partition-erase")
     screen.click(args.next_x, args.next_y, width, height)
-    time.sleep(3)
+    time.sleep(4)
     screen.shot("users")
 
-    # The users page: full name, then the login name, hostname and password
-    # fields in tab order. Calamares derives the login name and hostname from
-    # the full name, so both are overwritten explicitly.
-    screen.click(args.users_x, args.users_y, width, height)
-    screen.text(INSTALLED_FULL_NAME)
-    time.sleep(1)
-    screen.key("tab")
-    screen.key("ctrl-a") if False else None
-    screen.text(INSTALLED_USER)
-    screen.key("tab")
-    screen.text(INSTALLED_HOSTNAME)
-    screen.key("tab")
-    screen.text(INSTALLED_PASSWORD)
-    screen.key("tab")
-    screen.text(INSTALLED_PASSWORD)
-    time.sleep(1)
+    fill(screen, args.name_x, args.name_y, INSTALLED_FULL_NAME, args)
+    fill(screen, args.login_x, args.login_y, INSTALLED_USER, args)
+    fill(screen, args.host_x, args.host_y, INSTALLED_HOSTNAME, args)
+    fill(screen, args.password_x, args.password_y, INSTALLED_PASSWORD, args)
+    fill(screen, args.repeat_x, args.repeat_y, INSTALLED_PASSWORD, args)
     screen.shot("users-filled")
 
     screen.click(args.next_x, args.next_y, width, height)
-    time.sleep(3)
+    time.sleep(4)
     screen.shot("summary")
+    # The same button, now labelled Install, begins the exec phase.
     screen.click(args.next_x, args.next_y, width, height)
-    time.sleep(5)
+    time.sleep(8)
     screen.shot("install-started")
 
 
@@ -501,12 +511,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--height", type=int, default=768)
     # Calamares centres an 800x520 window on the screen. These are the defaults
     # for 1024x768 and can be overridden without editing the driver.
-    parser.add_argument("--next-x", type=int, default=782)
-    parser.add_argument("--next-y", type=int, default=610)
-    parser.add_argument("--erase-x", type=int, default=160)
-    parser.add_argument("--erase-y", type=int, default=250)
-    parser.add_argument("--users-x", type=int, default=420)
-    parser.add_argument("--users-y", type=int, default=175)
+    # Verified against the running installer at 1024x768 with install_console.
+    parser.add_argument("--next-x", type=int, default=884)
+    parser.add_argument("--next-y", type=int, default=719)
+    parser.add_argument("--erase-x", type=int, default=189)
+    parser.add_argument("--erase-y", type=int, default=180)
+    parser.add_argument("--name-x", type=int, default=281)
+    parser.add_argument("--name-y", type=int, default=163)
+    parser.add_argument("--login-x", type=int, default=281)
+    parser.add_argument("--login-y", type=int, default=219)
+    parser.add_argument("--host-x", type=int, default=281)
+    parser.add_argument("--host-y", type=int, default=275)
+    parser.add_argument("--password-x", type=int, default=281)
+    parser.add_argument("--password-y", type=int, default=331)
+    parser.add_argument("--repeat-x", type=int, default=487)
+    parser.add_argument("--repeat-y", type=int, default=331)
     parser.add_argument("--skip-installed-boot", action="store_true")
     return parser
 
