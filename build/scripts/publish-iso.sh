@@ -97,10 +97,10 @@ rm -rf "${stage}"
 mkdir -p "${stage}"
 
 log "splitting $(basename "${iso_path}") for release ${tag}"
-# 1900 MiB keeps each part clear of GitHub's 2 GiB asset ceiling.
+# release_artifacts.py caps a part at 1 GiB, comfortably under GitHub's 2 GiB
+# asset ceiling, and defaults to that maximum.
 "${REPO_ROOT}/build/release/release_artifacts.py" split "${iso_path}" \
-  --output-dir "${stage}" \
-  --chunk-size $((1900 * 1024 * 1024))
+  --output-dir "${stage}"
 
 manifest="$(find "${stage}" -maxdepth 1 -name '*.json' -type f | head -n 1)"
 [[ -n "${manifest}" ]] || die "the split produced no manifest"
