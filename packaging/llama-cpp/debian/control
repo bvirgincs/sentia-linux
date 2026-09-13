@@ -8,6 +8,7 @@ Build-Depends:
  ninja-build,
  g++,
  make,
+ patchelf,
  pkgconf,
  python3
 Standards-Version: 4.7.0

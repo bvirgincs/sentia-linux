@@ -63,10 +63,20 @@ override_dh_auto_test:
 # no server binary at all. There is no per-tool switch, so the other tools are
 # built and then dropped here; only llama-server is shipped.
 override_dh_auto_install:
-	dh_auto_install
+	# A single-binary package installs straight into debian/<package> by
+	# default, which bypasses the .install file entirely. Stage into
+	# debian/tmp so only the runtime paths listed there are shipped.
+	dh_auto_install --destdir=debian/tmp
 	find debian/tmp/usr/bin -maxdepth 1 -type f \
 	  ! -name 'llama-server' -delete
 	test -x debian/tmp/usr/bin/llama-server
+	# llama-server links against libllama-server-impl.so, which upstream builds
+	# but never installs, and the binary carries no RUNPATH. Without this the
+	# package ships an executable that cannot start at all.
+	install -D -m 0644 obj-$(DEB_HOST_GNU_TYPE)/bin/libllama-server-impl.so \
+	  debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/libllama-server-impl.so
+	# That library was linked with a RUNPATH pointing into the build tree.
+	patchelf --remove-rpath debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/libllama-server-impl.so
 	install -D -m 0644 config/llama/sentia-local.env debian/tmp/etc/sentia/llama/sentia-local.env
 	install -D -m 0644 config/systemd/sentia-local-llama.service debian/tmp/lib/systemd/system/sentia-local-llama.service
 	install -D -m 0644 config/systemd/sentia-local-llama-readiness.service debian/tmp/lib/systemd/system/sentia-local-llama-readiness.service

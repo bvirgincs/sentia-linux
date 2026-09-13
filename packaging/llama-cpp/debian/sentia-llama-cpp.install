@@ -1,9 +1,14 @@
-# Only the server binary is shipped from tools/; see debian/rules for why the
-# rest are built and discarded. The shared libraries and the dynamically loaded
-# CPU backend variants must be shipped too, or the server cannot start.
+# Runtime only: the headers, cmake files and pkg-config file that upstream also
+# installs belong in a development package, which Sentia does not ship.
+# libllama-server-impl.so is unversioned because upstream does not install it at
+# all; debian/rules stages it explicitly.
 usr/bin/llama-server
-usr/lib/*/libllama.so*
-usr/lib/*/libggml*.so*
+usr/lib/*/libggml.so.*
+usr/lib/*/libggml-base.so.*
+usr/lib/*/libllama.so.*
+usr/lib/*/libllama-common.so.*
+usr/lib/*/libmtmd.so.*
+usr/lib/*/libllama-server-impl.so
 usr/lib/*/sentia-llama-cpp/backends/*
 etc/sentia/llama/sentia-local.env
 lib/systemd/system/sentia-local-llama.service
