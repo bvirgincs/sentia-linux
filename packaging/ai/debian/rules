@@ -60,8 +60,14 @@ override_dh_auto_install:
 	  debian/sentia-router/etc/sentia/retrieval/sources.toml
 	install -D -m 0644 $(WORKSPACE)/config/retrieval/query-policy.json \
 	  debian/sentia-router/etc/sentia/retrieval/query-policy.json
-	for unit in sentia-router.service sentia-router.socket \
-	            sentia-local-broker.service \
+	# The router is per-user: its units use %t and %h and belong to the user
+	# manager. Installing them as system units gave every user's socket path
+	# as /run/sentia/router.sock, which no client looks for.
+	for unit in sentia-router.service sentia-router.socket; do \
+	  install -D -m 0644 $(WORKSPACE)/config/systemd/$$unit \
+	    debian/sentia-router/usr/lib/systemd/user/$$unit; \
+	done
+	for unit in sentia-local-broker.service \
 	            sentia-index.service sentia-index.path sentia-index.timer; do \
 	  install -D -m 0644 $(WORKSPACE)/config/systemd/$$unit \
 	    debian/sentia-router/usr/lib/systemd/system/$$unit; \
@@ -135,7 +141,6 @@ override_dh_auto_install:
 # first boot has had a chance to configure a policy, and the desktop must never
 # wait for model startup. Ordering is expressed in the units themselves.
 override_dh_installsystemd:
-	dh_installsystemd -p sentia-router --name=sentia-router --no-start
 	dh_installsystemd -p sentia-router --name=sentia-local-broker --no-start
 	dh_installsystemd -p sentia-router --name=sentia-index --no-enable --no-start
 	dh_installsystemd -p sentia-system-tools --name=sentia-privileged --no-start

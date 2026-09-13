@@ -13,6 +13,14 @@
 export LC_ALL=C
 export PAGER=cat
 export SYSTEMD_COLORS=0
+# The serial console login this runs from does not always provide the sbin
+# directories, and several checks use tools that live there (runuser, ip).
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Boot completion is asynchronous: the login prompt the harness waits for can
+# appear while late units are still activating. Give the boot a bounded chance
+# to settle before asserting anything about unit state.
+timeout 300 systemctl is-system-running --wait >/dev/null 2>&1 || true
 
 check() {
   local id="$1" detail="$2" status="$3"
@@ -37,8 +45,11 @@ else
 fi
 
 # LIVE-VENDOR: dpkg must report Sentia as the vendor with Debian as parent.
-vendor="$(dpkg-vendor --query Vendor 2>&1)"
-parent="$(dpkg-vendor --query Parent 2>&1)"
+# dpkg-vendor ships in dpkg-dev, which a minimal desktop image has no reason to
+# install, so read the origin file that dpkg-vendor itself reads.
+vendor_origin="$(readlink -f /etc/dpkg/origins/default 2>/dev/null || true)"
+vendor="$(sed -n 's/^Vendor:[[:space:]]*//p' "${vendor_origin}" 2>/dev/null | head -n 1)"
+parent="$(sed -n 's/^Parent:[[:space:]]*//p' "${vendor_origin}" 2>/dev/null | head -n 1)"
 if [[ "${vendor}" == "Sentia" && "${parent}" == "Debian" ]]; then
   check LIVE-VENDOR "vendor=${vendor} parent=${parent}" PASS
 else
