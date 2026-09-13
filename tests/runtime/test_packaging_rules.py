@@ -18,7 +18,10 @@ class PackagingRulesTests(unittest.TestCase):
             "-DLLAMA_BUILD_UI=OFF",
             "-DLLAMA_USE_PREBUILT_UI=OFF",
             "-DLLAMA_SUBPROCESS=OFF",
-            "-j2",
+            # Build parallelism is bounded and caller-selectable; an unbounded
+            # -j on the build host exhausts its memory during the ggml compile.
+            "-j$(LLAMA_JOBS)",
+            "LLAMA_JOBS ?=",
         ]:
             self.assertIn(flag, text)
 

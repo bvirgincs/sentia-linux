@@ -11,10 +11,16 @@ ConditionPathExists=/usr/share/sentia/models/granite-4.2-3b/granite-4.2-3b-Q4_K_
 Type=simple
 User=sentia-inference
 Group=sentia-inference
-UMask=0007
+# 0177 makes the socket llama-server creates mode 0600, which is what the
+# contract requires and what sentia-local-broker verifies before connecting.
+UMask=0177
 EnvironmentFile=-/etc/sentia/llama/sentia-local.env
-RuntimeDirectory=sentia-local
-RuntimeDirectoryMode=0750
+# The runtime owns /run/sentia-inference and nothing else. It must not share a
+# runtime directory with the broker: systemd removes a RuntimeDirectory when its
+# unit stops, so a runtime restart used to delete the broker's socket, and the
+# two units disagreed about the directory mode.
+RuntimeDirectory=sentia-inference
+RuntimeDirectoryMode=0700
 StateDirectory=sentia-local-llama
 StateDirectoryMode=0750
 LogsDirectory=sentia-local-llama
@@ -67,7 +73,7 @@ IPAddressDeny=any
 CapabilityBoundingSet=
 AmbientCapabilities=
 ReadOnlyPaths=/usr/share/sentia/models
-ReadWritePaths=/var/lib/sentia-local-llama /var/log/sentia-local-llama /run/sentia-local
+ReadWritePaths=/var/lib/sentia-local-llama /var/log/sentia-local-llama /run/sentia-inference
 RemoveIPC=yes
 TasksMax=128
 CPUAccounting=yes

@@ -198,7 +198,7 @@ fi
 # ---------------------------------------------------------------------------
 
 MODEL_PATH=/usr/share/sentia/models/granite-4.2-3b/granite-4.2-3b-Q4_K_M.gguf
-LLAMA_SOCKET=/run/sentia-local/llama.sock
+LLAMA_SOCKET=/run/sentia-inference/llama.sock
 BROKER_SOCKET=/run/sentia-local/broker.sock
 
 # AI-RUNTIME-BINARY: the packaged llama.cpp server must actually be present.
@@ -238,9 +238,18 @@ fi
 
 # AI-RUNTIME-SOCKET: the runtime must listen on a private local socket and must
 # not be reachable from anywhere else.
+# The mode is asserted, not merely reported: sentia-local-broker refuses to use
+# a runtime socket that is not exactly 0600 in a 0700 directory, so a permissive
+# umask here disables local AI while every unit still reports active.
 if [[ -S "${LLAMA_SOCKET}" ]]; then
   socket_mode="$(stat -c '%a %U:%G' "${LLAMA_SOCKET}")"
-  check AI-RUNTIME-SOCKET "${socket_mode}" PASS
+  directory_mode="$(stat -c '%a %U:%G' "$(dirname "${LLAMA_SOCKET}")")"
+  if [[ "${socket_mode}" == "600 sentia-inference:sentia-inference" \
+     && "${directory_mode}" == "700 sentia-inference:sentia-inference" ]]; then
+    check AI-RUNTIME-SOCKET "${socket_mode} in ${directory_mode}" PASS
+  else
+    check AI-RUNTIME-SOCKET "socket=${socket_mode} dir=${directory_mode}" FAIL
+  fi
 else
   check AI-RUNTIME-SOCKET "${LLAMA_SOCKET} is not a socket" FAIL
 fi
@@ -251,6 +260,17 @@ if [[ -z "${exposed}" ]]; then
   check AI-RUNTIME-NOT-EXPOSED "no externally bound listeners" PASS
 else
   check AI-RUNTIME-NOT-EXPOSED "listening: ${exposed//$'\n'/ }" FAIL
+fi
+
+# AI-RUNTIME-READY: the shipped readiness probe performs a real generation over
+# the runtime socket. Checking it separates a broken model or runtime from a
+# broken broker or router, which otherwise present the same symptom.
+readiness_report=/var/log/sentia-local-llama/readiness.json
+readiness_result="$(systemctl show sentia-local-llama-readiness.service -p Result --value 2>&1)"
+if [[ "${readiness_result}" == "success" ]] && grep -q '"success":true' "${readiness_report}" 2>/dev/null; then
+  check AI-RUNTIME-READY "$(sed -n 's/.*\("generation_seconds":[0-9]*\).*/\1/p' "${readiness_report}")" PASS
+else
+  check AI-RUNTIME-READY "result=${readiness_result} report=$(head -c 300 "${readiness_report}" 2>&1)" FAIL
 fi
 
 # AI-BROKER-ACTIVE: the peer-authenticated broker is the only path users get.

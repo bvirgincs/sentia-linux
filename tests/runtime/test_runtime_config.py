@@ -48,7 +48,7 @@ class RuntimeConfigTests(unittest.TestCase):
             "SENTIA_N_PARALLEL": "1",
             "SENTIA_MAX_PREDICT": "256",
             "SENTIA_SLEEP_IDLE_SECONDS": "300",
-            "SENTIA_SOCKET_PATH": "/run/sentia-local/llama.sock",
+            "SENTIA_SOCKET_PATH": "/run/sentia-inference/llama.sock",
         }
         kv = {}
         for line in env_text.splitlines():

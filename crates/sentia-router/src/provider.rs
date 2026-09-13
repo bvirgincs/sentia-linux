@@ -104,6 +104,34 @@ pub struct LocalBrokerProvider {
     timeout: Duration,
 }
 
+/// Decide whether the broker socket is safe to use before connecting.
+///
+/// The socket is deliberately mode `0666`: the broker is the machine-wide entry
+/// point for every login session and authorises callers from `SO_PEERCRED`, not
+/// from the filesystem mode. The substitution defence is therefore the parent
+/// directory, which must be owned by the same non-root service account and must
+/// not be group- or world-writable, so no other user can replace the socket.
+///
+/// This is a pure function because the mode is stated in three places - the
+/// broker's bind, this check, and the router contract defaults - and a silent
+/// disagreement between them disables all local AI while every unit still
+/// reports healthy.
+fn broker_socket_is_safe(
+    is_socket: bool,
+    socket_uid: u32,
+    socket_mode: u32,
+    parent_uid: u32,
+    parent_mode: u32,
+    self_uid: u32,
+) -> bool {
+    is_socket
+        && socket_uid != 0
+        && socket_uid != self_uid
+        && socket_mode & 0o777 == 0o666
+        && parent_uid == socket_uid
+        && parent_mode & 0o022 == 0
+}
+
 impl LocalBrokerProvider {
     pub fn new(socket: PathBuf, timeout: Duration) -> Self {
         Self { socket, timeout }
@@ -119,13 +147,14 @@ impl LocalBrokerProvider {
             )
         })?;
         let parent_metadata = fs::symlink_metadata(parent).map_err(io_provider_error)?;
-        if !metadata.file_type().is_socket()
-            || metadata.uid() == 0
-            || metadata.uid() == unsafe { libc::geteuid() }
-            || metadata.permissions().mode() & 0o777 != 0o660
-            || parent_metadata.uid() != metadata.uid()
-            || parent_metadata.permissions().mode() & 0o022 != 0
-        {
+        if !broker_socket_is_safe(
+            metadata.file_type().is_socket(),
+            metadata.uid(),
+            metadata.permissions().mode(),
+            parent_metadata.uid(),
+            parent_metadata.permissions().mode(),
+            unsafe { libc::geteuid() },
+        ) {
             return Err(ProviderError::new(
                 FailureKind::Provider(ProviderErrorCode::ProcessFailure),
                 "local broker socket ownership or directory permissions are unsafe",
@@ -521,5 +550,29 @@ mod tests {
         assert!(!breakers.allow("remote"));
         breakers.success("remote");
         assert!(breakers.allow("remote"));
+    }
+
+    #[test]
+    fn broker_socket_accepts_the_shipped_service_layout() {
+        // /run/sentia-local is RuntimeDirectory 0755 owned by sentia-inference,
+        // and the broker binds broker.sock 0666 inside it.
+        assert!(broker_socket_is_safe(true, 992, 0o666, 992, 0o755, 1000));
+    }
+
+    #[test]
+    fn broker_socket_rejects_unsafe_layouts() {
+        // Not a socket at all.
+        assert!(!broker_socket_is_safe(false, 992, 0o666, 992, 0o755, 1000));
+        // Root-owned, which the broker never is.
+        assert!(!broker_socket_is_safe(true, 0, 0o666, 0, 0o755, 1000));
+        // Our own socket, which would mean the broker is not running.
+        assert!(!broker_socket_is_safe(true, 1000, 0o666, 1000, 0o755, 1000));
+        // A mode no login session can open: the regression this guards.
+        assert!(!broker_socket_is_safe(true, 992, 0o660, 992, 0o755, 1000));
+        // A directory owned by somebody else, or writable by anybody else,
+        // would let a third party substitute the socket.
+        assert!(!broker_socket_is_safe(true, 992, 0o666, 993, 0o755, 1000));
+        assert!(!broker_socket_is_safe(true, 992, 0o666, 992, 0o757, 1000));
+        assert!(!broker_socket_is_safe(true, 992, 0o666, 992, 0o775, 1000));
     }
 }
