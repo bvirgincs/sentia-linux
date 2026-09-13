@@ -301,6 +301,19 @@ else
   check LIVE-NO-FAILED-USER-UNITS "${failed_user}" FAIL
 fi
 
+# The per-user router is socket-activated and starts with the session, so it can
+# still be coming up when the serial console reaches a prompt. Wait for it
+# explicitly: an earlier run reported a refused connection that was only this
+# race, which is indistinguishable from a real fault in the result line.
+router_wait=0
+until [[ "$(as_ai_user systemctl --user is-active sentia-router.socket 2>&1)" == "active" ]]; do
+  if [[ "${router_wait}" -ge 60 ]]; then
+    break
+  fi
+  sleep 2
+  router_wait=$((router_wait + 2))
+done
+
 # The exit status is the result, not a keyword search of the output: an earlier
 # version accepted "runuser: may not be used by non-root users" as an answer.
 ai_output="$(as_ai_user timeout 600 \

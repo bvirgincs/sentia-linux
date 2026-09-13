@@ -16,7 +16,7 @@ use std::{
     io::{self, Read, Write},
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
     sync::atomic::{AtomicU64, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tokio::{
     io::{AsyncBufRead, AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -346,8 +346,7 @@ async fn exchange(request: JsonlFrame, output: OutputMode) -> io::Result<Vec<Jso
         }
     };
     let socket = runtime_socket_path()?;
-    verify_socket(&socket)?;
-    let stream = UnixStream::connect(&socket).await?;
+    let stream = connect_router(&socket).await?;
     let credentials = stream.peer_cred()?;
     if credentials.uid() != unsafe { libc::geteuid() } {
         return Err(io::Error::new(
@@ -548,6 +547,50 @@ fn control_response(frames: &[JsonlFrame]) -> io::Result<Option<ControlResponse>
         }
     }
     Ok(None)
+}
+
+// The per-user router is socket-activated and starts with the session, so a
+// terminal opened immediately after login can beat it to the socket by a few
+// seconds. A raw "Connection refused (os error 111)" is the wrong thing to show
+// a user in that window, so wait briefly and then explain what is actually
+// wrong.
+const ROUTER_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+const ROUTER_CONNECT_RETRY: Duration = Duration::from_millis(250);
+
+async fn connect_router(path: &std::path::Path) -> io::Result<UnixStream> {
+    let deadline = Instant::now() + ROUTER_CONNECT_TIMEOUT;
+    loop {
+        let attempt = match verify_socket(path) {
+            Ok(()) => UnixStream::connect(path).await,
+            Err(error) => Err(error),
+        };
+        let error = match attempt {
+            Ok(stream) => return Ok(stream),
+            Err(error) => error,
+        };
+        // A permission or ownership failure is a real fault, not a race, and
+        // must surface immediately rather than after a 30 second wait.
+        let starting = matches!(
+            error.kind(),
+            io::ErrorKind::NotFound | io::ErrorKind::ConnectionRefused
+        );
+        if !starting {
+            return Err(error);
+        }
+        if Instant::now() >= deadline {
+            return Err(io::Error::new(
+                io::ErrorKind::ConnectionRefused,
+                format!(
+                    "local AI is not available: nothing is accepting connections on {} after {}s. \
+                     The per-user router starts with your session; check it with \
+                     `systemctl --user status sentia-router.socket sentia-router.service`.",
+                    path.display(),
+                    ROUTER_CONNECT_TIMEOUT.as_secs()
+                ),
+            ));
+        }
+        tokio::time::sleep(ROUTER_CONNECT_RETRY).await;
+    }
 }
 
 fn verify_socket(path: &std::path::Path) -> io::Result<()> {
