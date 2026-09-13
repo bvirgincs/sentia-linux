@@ -12,12 +12,15 @@ log "test-install log: ${test_install_log}"
 iso_path="$(latest_iso_path || true)"
 [[ -n "${iso_path}" ]] || die "no ISO artifact found in ${ISO_STAGE_DIR}; run make iso first"
 
-automation_harness="${REPO_ROOT}/tests/vm/test-install.sh"
+automation_harness="${REPO_ROOT}/tests/vm/install_probe.py"
 if [[ ! -x "${automation_harness}" ]]; then
-  die "missing installer automation harness: ${automation_harness} (owned by VM/installer test agent)"
+  die "missing installer automation harness: ${automation_harness}"
 fi
 
-run_heavy "installer acceptance automation" "${automation_harness}" "${iso_path}" "${VM_STAGE_DIR}"
+run_heavy "installer acceptance automation" \
+  "${automation_harness}" \
+  --iso "${iso_path}" \
+  --run-dir "${VM_STAGE_DIR}/install"
 
 {
   echo "generated_at=$(timestamp_utc)"
