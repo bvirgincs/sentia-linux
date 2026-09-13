@@ -36,5 +36,7 @@ SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@mount @privileged @reboot @resources @swap
 
-[Install]
-WantedBy=default.target
+# Deliberately no [Install]: sentia-router.socket owns the socket path and is the
+# unit that gets enabled. Starting this service from default.target as well gave
+# the path two owners, because a service started that way is handed no listening
+# file descriptor and binds the path itself.

@@ -40,7 +40,7 @@ use tokio_util::sync::CancellationToken;
 static FRAME_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 pub async fn run(router: Arc<Router>, shutdown: CancellationToken) -> io::Result<()> {
-    let listener = listener_from_systemd()?.unwrap_or(bind_runtime_socket()?);
+    let listener = acquire_listener(listener_from_systemd, bind_runtime_socket)?;
     let connection_limit = Arc::new(Semaphore::new(router.config().max_connections));
     let mut connections = JoinSet::new();
     loop {
@@ -932,6 +932,22 @@ fn validate_peer(stream: &UnixStream) -> io::Result<()> {
     Ok(())
 }
 
+// The fallback must never run when systemd already supplied the listener.
+// bind_runtime_socket unlinks whatever is at the socket path and binds its own,
+// so evaluating it eagerly replaced systemd's live socket file with one that was
+// immediately dropped and closed. The path was left pointing at a dead socket
+// and every client got ECONNREFUSED while both units reported active.
+fn acquire_listener<S, B>(from_systemd: S, bind: B) -> io::Result<UnixListener>
+where
+    S: FnOnce() -> io::Result<Option<UnixListener>>,
+    B: FnOnce() -> io::Result<UnixListener>,
+{
+    match from_systemd()? {
+        Some(listener) => Ok(listener),
+        None => bind(),
+    }
+}
+
 fn bind_runtime_socket() -> io::Result<UnixListener> {
     let path = runtime_socket_path()?;
     bind_socket_path(&path)
@@ -1034,8 +1050,8 @@ mod tests {
         assert!(read_frame(&mut oversized, 4).await.is_err());
     }
 
-    #[test]
-    fn router_socket_permissions_are_private() {
+    #[tokio::test]
+    async fn router_socket_permissions_are_private() {
         let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("target/test-state")
             .join(format!("router-socket-{}", std::process::id()));
@@ -1049,6 +1065,61 @@ mod tests {
         fs::remove_file(&socket).unwrap();
         fs::remove_dir(directory.join("sentia")).unwrap();
         fs::remove_dir(directory).unwrap();
+    }
+
+    // The socket path is left pointing at a dead socket if the bind fallback runs
+    // while systemd has already supplied the listener, and every client then gets
+    // ECONNREFUSED from units that both report active.
+    #[tokio::test]
+    async fn systemd_listener_suppresses_the_bind_fallback() {
+        let directory = std::env::temp_dir()
+            .join(format!("router-acquire-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        let socket = directory.join("sentia/router.sock");
+        let supplied = bind_socket_path(&socket).unwrap();
+        let supplied_inode = fs::symlink_metadata(&socket).unwrap().ino();
+
+        let mut fallback_ran = false;
+        let listener = acquire_listener(
+            || Ok(Some(supplied)),
+            || {
+                fallback_ran = true;
+                bind_socket_path(&socket)
+            },
+        )
+        .unwrap();
+
+        assert!(!fallback_ran, "bind fallback ran despite a systemd listener");
+        assert_eq!(
+            fs::symlink_metadata(&socket).unwrap().ino(),
+            supplied_inode,
+            "the socket file was replaced"
+        );
+        drop(listener);
+        let _ = fs::remove_dir_all(&directory);
+    }
+
+    #[tokio::test]
+    async fn bind_fallback_runs_without_a_systemd_listener() {
+        let directory = std::env::temp_dir()
+            .join(format!("router-acquire-none-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        let socket = directory.join("sentia/router.sock");
+
+        let mut fallback_ran = false;
+        let listener = acquire_listener(
+            || Ok(None),
+            || {
+                fallback_ran = true;
+                bind_socket_path(&socket)
+            },
+        )
+        .unwrap();
+
+        assert!(fallback_ran, "nothing bound the socket");
+        assert!(fs::symlink_metadata(&socket).unwrap().file_type().is_socket());
+        drop(listener);
+        let _ = fs::remove_dir_all(&directory);
     }
 
     #[test]
