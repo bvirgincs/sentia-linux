@@ -1,8 +1,11 @@
 # Package/toolchain set installed inside the Debian 13 (trixie) build chroot.
+#
+# Must satisfy every Build-Depends declared under packaging/*/debian/control.
+# tests/build/test_builder_dependencies.py enforces that.
 apt-transport-https
 build-essential
-cargo
 ca-certificates
+cargo
 cmake
 curl
 debhelper
@@ -10,15 +13,22 @@ debian-archive-keyring
 devscripts
 dpkg-dev
 fakeroot
+g++
 gnupg
 grub-efi-amd64-bin
 grub-pc-bin
 isolinux
+libglib2.0-dev
+libgtk-4-dev
+libsqlite3-dev
+libvte-2.91-gtk4-dev
 live-build
 make
 ninja-build
 ovmf
+patchelf
 pkg-config
+pkgconf
 python3
 qemu-system-x86
 reprepro
