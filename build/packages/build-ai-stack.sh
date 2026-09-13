@@ -6,6 +6,7 @@
 # Without these packages the ISO has no AI, which is the entire product, so the
 # default is to build all of them. The model payload is a 2.2 GB download; set
 # SENTIA_SKIP_MODEL_PACKAGE=1 to build everything except sentia-granite-model
+# SENTIA_SKIP_LLAMA_PACKAGE=1 to reuse the already-built sentia-llama-cpp
 # when iterating on something unrelated.
 set -euo pipefail
 
@@ -63,7 +64,13 @@ else
   build_rust_stack
 fi
 
-build_llama_runtime
+# The runtime tree is a pinned upstream commit, so it only needs rebuilding
+# when its packaging changes. Same iteration control as the other two.
+if [[ "${SENTIA_SKIP_LLAMA_PACKAGE:-0}" == "1" ]]; then
+  echo "SENTIA_SKIP_LLAMA_PACKAGE=1: skipping sentia-llama-cpp" >&2
+else
+  build_llama_runtime
+fi
 
 if [[ "${SENTIA_SKIP_MODEL_PACKAGE:-0}" == "1" ]]; then
   echo "SENTIA_SKIP_MODEL_PACKAGE=1: skipping sentia-granite-model" >&2

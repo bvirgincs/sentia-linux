@@ -112,6 +112,20 @@ run_heavy() {
   flock "${SENTIA_LOCK_FILE}" "$@"
 }
 
+builder_passthrough_env() {
+  # The build-tuning switches are set on the orchestration host, but the work
+  # happens inside the container, so forward the ones the build scripts read.
+  # This is an explicit allowlist: the builder must not inherit arbitrary host
+  # environment.
+  local var
+  for var in SENTIA_BUILD_JOBS SENTIA_SKIP_RUST_PACKAGE \
+             SENTIA_SKIP_LLAMA_PACKAGE SENTIA_SKIP_MODEL_PACKAGE; do
+    if [[ -n "${!var:-}" ]]; then
+      printf -- '--setenv=%s=%s\n' "${var}" "${!var}"
+    fi
+  done
+}
+
 run_in_builder() {
   local label="$1"
   local command="$2"
@@ -131,6 +145,9 @@ run_in_builder() {
     workspace_bind=(--bind-ro="${workspace_host}:/workspace")
   fi
 
+  local -a passthrough_env=()
+  mapfile -t passthrough_env < <(builder_passthrough_env)
+
   run_heavy "${label}" sudo systemd-nspawn \
     --quiet \
     --register=no \
@@ -138,6 +155,7 @@ run_in_builder() {
     "${workspace_bind[@]}" \
     --bind="${SENTIA_BUILDER_ARTIFACTS_DIR}:/artifacts" \
     --bind="${CACHE_DIR}:/var/cache/sentia" \
+    "${passthrough_env[@]}" \
     --setenv=DEBIAN_FRONTEND=noninteractive \
     --setenv=SOURCE_DATE_EPOCH="$(source_date_epoch)" \
     --setenv=MAKEFLAGS=-j2 \
@@ -163,6 +181,9 @@ run_in_builder_no_lock() {
     workspace_bind=(--bind-ro="${workspace_host}:/workspace")
   fi
 
+  local -a passthrough_env=()
+  mapfile -t passthrough_env < <(builder_passthrough_env)
+
   log "builder-no-lock: ${label}"
   sudo systemd-nspawn \
     --quiet \
@@ -171,6 +192,7 @@ run_in_builder_no_lock() {
     "${workspace_bind[@]}" \
     --bind="${SENTIA_BUILDER_ARTIFACTS_DIR}:/artifacts" \
     --bind="${CACHE_DIR}:/var/cache/sentia" \
+    "${passthrough_env[@]}" \
     --setenv=DEBIAN_FRONTEND=noninteractive \
     --setenv=SOURCE_DATE_EPOCH="$(source_date_epoch)" \
     --setenv=MAKEFLAGS=-j2 \
