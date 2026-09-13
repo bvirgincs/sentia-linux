@@ -198,6 +198,9 @@ def qemu_base(
 
 def start_qemu(command: list[str], serial_socket: Path, log: Path):
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    # A killed run leaves its socket behind, and in --existing-disk mode the
+    # run directory is kept, so bind would fail on the stale file.
+    serial_socket.unlink(missing_ok=True)
     server.bind(str(serial_socket))
     server.listen(1)
     server.settimeout(120)
