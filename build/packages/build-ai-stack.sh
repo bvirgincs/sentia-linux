@@ -55,7 +55,14 @@ build_granite_model() {
     -type f -name '*.deb' -exec cp -f {} "$output_dir/" \;
 }
 
-build_rust_stack
+# The Rust workspace is the longest step that changes most often, so it has the
+# same skip control as the model package for iterating on the later stages.
+if [[ "${SENTIA_SKIP_RUST_PACKAGE:-0}" == "1" ]]; then
+  echo "SENTIA_SKIP_RUST_PACKAGE=1: skipping the Sentia Rust packages" >&2
+else
+  build_rust_stack
+fi
+
 build_llama_runtime
 
 if [[ "${SENTIA_SKIP_MODEL_PACKAGE:-0}" == "1" ]]; then
