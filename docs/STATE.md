@@ -1,16 +1,19 @@
 # State
 
 ```yaml
-checkpoint: live-ai-chain-repair
+checkpoint: live-ai-answering-offline
 source: implemented
 packages: built
 iso: built-and-published
-live-boot: partial
-install: not-tested
+live-boot: passing-30-of-30
+install: in-progress
 release: not-qualified
 ```
 
-Updated while repairing the local AI socket chain against a real KVM boot.
+The live ISO now passes every one of its 30 acceptance checks on real KVM,
+including a Granite answer produced offline inside the booted image. The first
+Calamares installation attempt is running; nothing about the installed system is
+proven yet.
 
 ## The published ISO
 
@@ -58,11 +61,18 @@ published it. Nothing is built now without being staged for publication.
   system units and no failed user units, the graphical target active and
   Chromium reporting its version.
 
-## Known failures
+## The local AI chain, and how it was repaired
 
-Nothing below is deferred work; each has a fix in flight or already committed.
+All four defects below are fixed and the repaired chain is proven by a passing
+`AI-OFFLINE-ANSWER` on commit `35b2cee`:
 
-The local AI chain is `ai` -> per-user router socket -> router -> broker socket
+```text
+PASS AI-OFFLINE-ANSWER: local inference backend passed its health check
+  | Local AI queue position 1 | Local AI starting | Local AI ready
+  | The command that lists open files is typically `lsof` ...
+```
+
+The chain is `ai` -> per-user router socket -> router -> broker socket
 -> broker -> runtime socket -> llama.cpp. Every link had a defect that left both
 systemd units `active (running)` while the chain was dead, and each was found
 only by booting the image. In order of discovery:
@@ -88,6 +98,17 @@ only by booting the image. In order of discovery:
   the expected path. Both units also declared `RuntimeDirectory=sentia-local`,
   so they disagreed about its mode and a runtime restart deleted the broker's
   socket. The runtime now owns `/run/sentia-inference`.
+- The broker half-closed its connection to llama.cpp. `stream.into_split()`
+  returns an `OwnedWriteHalf` that shuts the socket down for writing when it is
+  dropped, and the broker dropped it as soon as the request was sent. llama.cpp
+  polls the connection while generating, read that EOF as the client leaving,
+  and logged `cancel task` in the same millisecond as `launch_slot_`; the user
+  saw `backend closed during chunk size`. The decisive evidence was an
+  identical streaming request through `curl` on the same socket completing
+  normally, which ruled out the runtime and the model. The write half now
+  outlives the response in both `chat()` and `health()`. The streaming test's
+  mock server asserts the client has not half-closed before answering, and
+  fails with exactly that message if the fix is reverted.
 
 `live_checks.sh` gained `AI-BROKER-SOCKET`, an asserted rather than reported
 `AI-RUNTIME-SOCKET`, and `AI-RUNTIME-READY`, so the next failure in this chain
@@ -108,9 +129,8 @@ is reported where it happens instead of as an unexplained `AI-OFFLINE-ANSWER`.
 ## Not tested yet
 
 - Calamares installation to a virtual disk, boot from that disk with the ISO
-  removed, and every installed-system acceptance check.
-- The broker-to-runtime link. It has never executed: the chain has failed
-  earlier on every boot so far.
+  removed, and every installed-system acceptance check. The first attempt is
+  running now; its click coordinates have never been exercised.
 - The failure-injection matrix and the independent security review.
 - Secure Boot behaviour under OVMF.
 - Any remote provider against a real account. No credentials have been supplied

@@ -102,6 +102,11 @@ class Screen:
         time.sleep(0.4)
 
 
+def split_marker(marker: str) -> str:
+    """Type a marker the guest's terminal echo cannot reproduce verbatim."""
+    return f"{marker[:-2]}''{marker[-2:]}"
+
+
 class Guest:
     """A logged-in serial shell, used to observe rather than to install."""
 
@@ -110,19 +115,26 @@ class Guest:
         self._token = 0
 
     def run(self, command: str, timeout: float = 60.0) -> str:
-        """Run a command and return its output, delimited by a unique token."""
+        """Run a command and return its output, delimited by a unique token.
+
+        Each marker is typed in two halves joined by an empty quoted string, so
+        the guest's own echo of the command line never contains the marker the
+        shell later prints. Without that, the delimiters matched the echoed
+        command first and every command appeared to produce no output at all.
+        """
         self._token += 1
         start = f"SENTIA_CMD_{self._token}_BEGIN"
         end = f"SENTIA_CMD_{self._token}_END"
         mark = len(self._session.transcript)
-        self._session.send(f"echo {start}; {command}; echo {end}$?")
+        self._session.send(
+            f"echo {split_marker(start)}; {command}; echo {split_marker(end)}$?"
+        )
         if not self._session.wait_for(end, timeout):
             raise ProbeError(f"guest command timed out: {command}")
         tail = self._session.transcript[mark:]
         body = tail.split(start, 1)[-1]
         body = body.split(end, 1)[0]
-        # Drop the echoed command line itself.
-        return "\n".join(body.splitlines()[1:]).strip()
+        return body.strip()
 
     def wait_until(self, command: str, timeout: float, poll: float = 5.0) -> bool:
         """Poll a predicate command until it succeeds."""
