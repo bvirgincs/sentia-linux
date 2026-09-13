@@ -88,16 +88,20 @@ pub(super) fn parse(body: &[u8]) -> Result<ParsedResponse, ProviderError> {
             .and_then(|value| value.get("total_tokens"))
             .and_then(|value| value.as_u64()),
     );
+    // A completed Responses API result carries no incomplete_details, so the
+    // top-level status is the terminal signal. Without this the normal success
+    // case mapped to FinishReason::Other.
     let reason = value
         .pointer("/incomplete_details/reason")
-        .and_then(|value| value.as_str());
+        .and_then(|value| value.as_str())
+        .unwrap_or(status);
 
     Ok(ParsedResponse {
         text,
         finish_reason: if refusal {
             crate::protocol::FinishReason::Refusal
         } else {
-            finish_reason(reason, incomplete)
+            finish_reason(Some(reason), incomplete)
         },
         incomplete,
         usage,
