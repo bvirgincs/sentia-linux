@@ -199,6 +199,7 @@ fi
 
 MODEL_PATH=/usr/share/sentia/models/granite-4.2-3b/granite-4.2-3b-Q4_K_M.gguf
 LLAMA_SOCKET=/run/sentia-local/llama.sock
+BROKER_SOCKET=/run/sentia-local/broker.sock
 
 # AI-RUNTIME-BINARY: the packaged llama.cpp server must actually be present.
 # The package once built cleanly while containing no server at all, so this is
@@ -260,8 +261,20 @@ else
   check AI-BROKER-ACTIVE "state=${broker_state}" FAIL
 fi
 
-# AI-ROUTER-SOCKET: the per-user router socket must exist for the live user and
-# must not be readable by other users.
+# AI-BROKER-SOCKET: the broker path must be reachable by an ordinary login
+# session. It was once bound 0660 root of the sentia-inference group, which no
+# desktop account is a member of, so every AI request failed with EACCES while
+# both services still reported active. Authorisation comes from SO_PEERCRED.
+if [[ -S "${BROKER_SOCKET}" ]]; then
+  broker_mode="$(stat -c '%a' "${BROKER_SOCKET}")"
+  if [[ "${broker_mode}" == "666" ]]; then
+    check AI-BROKER-SOCKET "${broker_mode} $(stat -c '%U:%G' "${BROKER_SOCKET}")" PASS
+  else
+    check AI-BROKER-SOCKET "mode=${broker_mode} is not user-reachable" FAIL
+  fi
+else
+  check AI-BROKER-SOCKET "${BROKER_SOCKET} is not a socket" FAIL
+fi
 router_socket="/run/user/$(id -u "${SENTIA_TEST_USER:-user}" 2>/dev/null || echo 1000)/sentia/router.sock"
 if [[ -S "${router_socket}" ]]; then
   check AI-ROUTER-SOCKET "$(stat -c '%a %U' "${router_socket}")" PASS

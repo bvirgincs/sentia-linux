@@ -4,6 +4,7 @@
   "backend_socket": "/run/sentia-inference/llama.sock",
   "backend_model": "sentia-local",
   "minimum_peer_uid": 1000,
+  "maximum_peer_uid": 60000,
   "max_active": 1,
   "max_global_queue": 16,
   "max_queue_per_uid": 2,

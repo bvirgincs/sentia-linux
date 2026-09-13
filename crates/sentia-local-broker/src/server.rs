@@ -85,7 +85,11 @@ impl Broker {
         stream: UnixStream,
         shutdown: CancellationToken,
     ) -> io::Result<()> {
-        let uid = validate_peer(&stream, self.config.minimum_peer_uid)?;
+        let uid = validate_peer(
+            &stream,
+            self.config.minimum_peer_uid,
+            self.config.maximum_peer_uid,
+        )?;
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
         let (event_tx, mut event_rx) = mpsc::channel::<BrokerEvent>(128);
@@ -644,10 +648,10 @@ where
     }
 }
 
-fn validate_peer(stream: &UnixStream, minimum_uid: u32) -> io::Result<u32> {
+fn validate_peer(stream: &UnixStream, minimum_uid: u32, maximum_uid: u32) -> io::Result<u32> {
     let credentials = stream.peer_cred()?;
     let uid = credentials.uid();
-    if uid < minimum_uid || uid == unsafe { libc::geteuid() } {
+    if uid < minimum_uid || uid > maximum_uid || uid == unsafe { libc::geteuid() } {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             "local broker rejected non-login or broker peer UID",
@@ -686,7 +690,12 @@ fn bind_public_socket(path: &Path) -> io::Result<UnixListener> {
         fs::remove_file(path)?;
     }
     let listener = UnixListener::bind(path)?;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o660))?;
+    // The broker is the machine-wide entry point for every login session, so the
+    // socket path itself must be reachable by any local user; authorisation is
+    // performed per connection from SO_PEERCRED in validate_peer, not from the
+    // filesystem mode. A group-restricted mode here would deny every desktop
+    // user, because no account is a member of the sentia-inference group.
+    fs::set_permissions(path, fs::Permissions::from_mode(0o666))?;
     Ok(listener)
 }
 
@@ -706,7 +715,7 @@ mod tests {
         let _listener = bind_public_socket(&socket).unwrap();
         assert_eq!(
             fs::metadata(&socket).unwrap().permissions().mode() & 0o777,
-            0o660
+            0o666
         );
         fs::remove_file(socket).unwrap();
         fs::remove_dir(directory).unwrap();

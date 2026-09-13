@@ -14,6 +14,7 @@ pub struct BrokerConfig {
     pub backend_socket: PathBuf,
     pub backend_model: String,
     pub minimum_peer_uid: u32,
+    pub maximum_peer_uid: u32,
     pub max_active: usize,
     pub max_global_queue: usize,
     pub max_queue_per_uid: usize,
@@ -33,6 +34,7 @@ impl Default for BrokerConfig {
             backend_socket: PathBuf::from(INFERENCE_SOCKET_PATH_V1),
             backend_model: "sentia-local".to_owned(),
             minimum_peer_uid: 1000,
+            maximum_peer_uid: 60_000,
             max_active: 1,
             max_global_queue: 16,
             max_queue_per_uid: 2,
@@ -70,6 +72,8 @@ impl BrokerConfig {
 
     fn validate(&mut self) -> io::Result<()> {
         if self.version != 1
+            || self.minimum_peer_uid == 0
+            || self.maximum_peer_uid < self.minimum_peer_uid
             || self.max_active == 0
             || self.max_active > 4
             || self.max_global_queue == 0

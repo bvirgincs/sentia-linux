@@ -43,9 +43,13 @@ native Rust. It exposes no model-control operation and has no TCP transport.
 
 The systemd unit starts alongside `sentia-local-llama.service` and runs as the
 unprivileged `sentia-inference` account so it can reach the contract-mandated
-mode-`0600` private inference socket. The public broker socket is mode `0660`;
-access is granted by local account group policy, then every connection is
-independently attributed and quota-limited by peer UID.
+mode-`0600` private inference socket. The public broker socket is mode `0666`,
+like the health metrics socket: every local login session must be able to reach
+the path, and authorisation is taken from `SO_PEERCRED` rather than from the
+filesystem mode. Connections are accepted only from UIDs inside the regular
+login range (`minimum_peer_uid`..`maximum_peer_uid`, 1000..60000 by default),
+which excludes system and systemd `DynamicUser` accounts, and every connection
+is then independently attributed and quota-limited by peer UID.
 
 ## Privacy and tools
 
