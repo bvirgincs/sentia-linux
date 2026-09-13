@@ -326,6 +326,12 @@ else
   # A refused router connection costs a whole boot cycle to diagnose without
   # this, and the reason is almost always in the user manager's own journal.
   echo "--- sentia-router diagnostics ---"
+  as_ai_user ls -la "/run/user/${ai_uid}/sentia/" 2>&1 | head -10 || true
+  # Which process, if any, actually holds a listening socket on that path. A
+  # refused connection to an existing socket file means nobody does.
+  ss -lxp 2>&1 | grep -a "router.sock" || echo "ss: no listener on router.sock"
+  as_ai_user systemctl --user show sentia-router.service \
+    -p ExecMainPID -p NRestarts -p Result -p ActiveState 2>&1 || true
   as_ai_user systemctl --user status sentia-router.socket sentia-router.service \
     --no-pager -l 2>&1 | head -40 || true
   as_ai_user journalctl --user -u sentia-router.service -u sentia-router.socket \
