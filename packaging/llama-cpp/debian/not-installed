@@ -1,0 +1,13 @@
+# Upstream installs a full development set. Sentia ships a runtime package only,
+# so the headers, cmake and pkg-config files and the unversioned development
+# symlinks are intentionally dropped. libllama-server-impl.so is not listed here
+# because it genuinely is a runtime library; see debian/rules.
+usr/include/*
+usr/lib/*/cmake/ggml/*
+usr/lib/*/cmake/llama/*
+usr/lib/*/pkgconfig/llama.pc
+usr/lib/*/libggml.so
+usr/lib/*/libggml-base.so
+usr/lib/*/libllama.so
+usr/lib/*/libllama-common.so
+usr/lib/*/libmtmd.so
