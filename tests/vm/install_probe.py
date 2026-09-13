@@ -537,6 +537,12 @@ def build_parser() -> argparse.ArgumentParser:
     # Calamares requires 20 GiB and the unpacked image is about 6 GiB.
     parser.add_argument("--disk-gb", type=int, default=30)
     parser.add_argument(
+        "--existing-disk",
+        default="",
+        help="skip the installation and run the installed-system checks against"
+        " a disk an earlier run produced",
+    )
+    parser.add_argument(
         "--guest-setup-command",
         default="",
         help="shell command run in the live guest before Calamares starts,"
@@ -574,21 +580,29 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     run_dir = Path(args.run_dir).resolve()
-    if run_dir.exists():
+    existing = Path(args.existing_disk).resolve() if args.existing_disk else None
+    if run_dir.exists() and existing is None:
         shutil.rmtree(run_dir)
-    run_dir.mkdir(parents=True)
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     iso = Path(args.iso).resolve()
-    if not iso.is_file():
+    if existing is None and not iso.is_file():
         raise ProbeError(f"ISO not found: {iso}")
     args.iso = str(iso)
 
-    disk = run_dir / "sentia-installed.qcow2"
-    create_disk(disk, args.disk_gb)
-
     report: dict = {"iso": str(iso), "disk_gb": args.disk_gb, "error": None}
     try:
-        report["install"] = install_phase(args, run_dir, disk)
+        if existing is None:
+            disk = run_dir / "sentia-installed.qcow2"
+            create_disk(disk, args.disk_gb)
+            report["install"] = install_phase(args, run_dir, disk)
+        else:
+            if not existing.is_file():
+                raise ProbeError(f"installed disk not found: {existing}")
+            # Re-running the checks against a disk a previous run installed:
+            # the installation itself is then untested by this invocation.
+            disk = existing
+            report["install"] = {"phase": "skipped", "disk": str(existing)}
         if args.skip_installed_boot:
             report["checks"] = []
         else:
