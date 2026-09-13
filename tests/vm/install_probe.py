@@ -493,10 +493,14 @@ def installed_boot_phase(args: argparse.Namespace, run_dir: Path, disk: Path) ->
         if not session.wait_for("$", 60):
             raise ProbeError("the installed user could not log in")
         guest = Guest(session)
-        guest.run("sudo -n mkdir -p /mnt/sentia-checks")
+        # The installed account is an ordinary sudo user: unlike the live
+        # account it has no NOPASSWD rule, so sudo has to be fed the password
+        # the installer was given.
+        sudo = f"printf '%s\\n' {INSTALLED_PASSWORD} | sudo -S -p ''"
+        guest.run(f"{sudo} mkdir -p /mnt/sentia-checks")
         guest.run(
-            "sudo -n mount -o ro -L SENTIACHECK /mnt/sentia-checks "
-            "|| sudo -n mount -o ro /dev/sr0 /mnt/sentia-checks"
+            f"{sudo} mount -o ro -L SENTIACHECK /mnt/sentia-checks "
+            f"|| {sudo} mount -o ro /dev/sr0 /mnt/sentia-checks"
         )
         session.send(
             f"SENTIA_TEST_PASSWORD={INSTALLED_PASSWORD} "
