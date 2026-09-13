@@ -51,6 +51,13 @@ LLAMA_JOBS ?= $(or $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIO
 override_dh_auto_build:
 	dh_auto_build -- -j$(LLAMA_JOBS)
 
+# LLAMA_BUILD_TESTS is off, so cmake never generates a "test" target and the
+# default dh_auto_test invocation fails the build. Upstream's suite needs model
+# files we deliberately do not fetch here; the runtime is exercised instead by
+# the VM acceptance checks, which run the packaged server against the packaged
+# weights.
+override_dh_auto_test:
+
 # Upstream only adds tools/ when LLAMA_BUILD_TOOLS is on, and llama-server lives
 # under tools/server, so LLAMA_BUILD_TOOLS=OFF silently produced a package with
 # no server binary at all. There is no per-tool switch, so the other tools are
