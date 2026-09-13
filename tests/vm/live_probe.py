@@ -267,9 +267,13 @@ def main() -> int:
     parser.add_argument("--username", default="user")
     parser.add_argument("--password", default="live")
     parser.add_argument("--cpus", type=int, default=4)
-    parser.add_argument("--memory-mb", type=int, default=4096)
+    # The guest has to hold the 2.24 GB model plus its KV cache at the
+    # configured 8192-token context, so 4 GiB is not enough to exercise the
+    # local AI. This is a test guest, not the 16 GiB product target.
+    parser.add_argument("--memory-mb", type=int, default=8192)
     parser.add_argument("--boot-timeout", type=float, default=float(os.environ.get("SENTIA_ISO_BOOT_TIMEOUT", 300)))
-    parser.add_argument("--check-timeout", type=float, default=240.0)
+    # Loading the model and generating a real answer dominates this budget.
+    parser.add_argument("--check-timeout", type=float, default=1500.0)
     parser.add_argument(
         "--offline",
         action="store_true",
