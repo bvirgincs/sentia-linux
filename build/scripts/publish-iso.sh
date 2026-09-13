@@ -8,9 +8,31 @@
 # GitHub caps a release asset at 2 GiB and the ISO is larger, so it is split
 # into deterministic parts with a manifest by build/release/release_artifacts.py
 # and reassembled by the same tool.
+#
+# Staging and uploading are separate so the two do not have to happen on the
+# same machine. A disposable build runner holds the ISO but must never hold a
+# GitHub credential, so it runs "stage" and the authenticated workstation runs
+# "upload" against the transferred directory.
+#
+#   publish-iso.sh            stage and upload from this host
+#   publish-iso.sh stage      split and verify only; no credential required
+#   publish-iso.sh upload DIR upload an already staged directory
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
+
+mode="${1:-all}"
+case "${mode}" in
+  all | stage) ;;
+  upload)
+    [[ $# -ge 2 ]] || { echo "usage: $0 upload <stage-dir>" >&2; exit 2; }
+    upload_stage="$2"
+    ;;
+  *)
+    echo "usage: $0 [all|stage|upload <stage-dir>]" >&2
+    exit 2
+    ;;
+esac
 
 init_dirs
 publish_log="${LOG_DIR}/publish-$(timestamp_utc).log"
@@ -18,17 +40,57 @@ exec > >(tee -a "${publish_log}") 2>&1
 
 log "publish log: ${publish_log}"
 
-require_command gh
 require_command sha256sum
+[[ "${mode}" == "stage" ]] || require_command gh
+
+# A pre-release by default: nothing is a Sentia release until it has passed the
+# install acceptance tests, and publishing an artifact is not that claim.
+prerelease_flag="--prerelease"
+[[ "${SENTIA_RELEASE_FINAL:-0}" == "1" ]] && prerelease_flag=""
+
+publish_release() {
+  local tag="$1" dir="$2" notes="$3"
+  if gh release view "${tag}" >/dev/null 2>&1; then
+    log "release ${tag} exists; replacing its assets"
+    gh release upload "${tag}" "${dir}"/* --clobber
+  else
+    log "creating release ${tag}"
+    # shellcheck disable=SC2086  # prerelease_flag is intentionally unquoted
+    gh release create "${tag}" "${dir}"/* \
+      --title "Sentia Linux ISO ${tag}" \
+      --notes-file "${notes}" \
+      ${prerelease_flag}
+  fi
+}
+
+# Uploading a directory staged elsewhere needs none of the split machinery; the
+# tag and the notes are already recorded in the directory itself.
+if [[ "${mode}" == "upload" ]]; then
+  [[ -d "${upload_stage}" ]] || die "no such stage directory: ${upload_stage}"
+  upload_stage="$(cd "${upload_stage}" && pwd)"
+  tag="$(basename "${upload_stage}")"
+  notes="${upload_stage}/NOTES.md"
+  [[ -f "${notes}" ]] || die "stage directory has no NOTES.md: ${upload_stage}"
+  [[ -f "${upload_stage}/SHA256SUMS" ]] ||
+    die "stage directory has no SHA256SUMS: ${upload_stage}"
+  manifest="$(find "${upload_stage}" -maxdepth 1 -name '*.json' -type f | head -n 1)"
+  [[ -n "${manifest}" ]] || die "stage directory has no manifest: ${upload_stage}"
+
+  # The parts crossed a network to get here. Prove they still reconstruct the
+  # ISO before they are published, not after someone downloads them.
+  log "verifying the staged parts before upload"
+  "${REPO_ROOT}/build/release/release_artifacts.py" verify "${manifest}" \
+    --parts-dir "${upload_stage}"
+
+  publish_release "${tag}" "${upload_stage}" "${notes}"
+  log "published ${tag}: $(gh release view "${tag}" --json url --jq .url)"
+  exit 0
+fi
 
 iso_path="$(latest_iso_path || true)"
 [[ -n "${iso_path}" ]] || die "no ISO artifact found in ${ISO_STAGE_DIR}; run make iso first"
 
 tag="${SENTIA_RELEASE_TAG:-iso-$(date -u +%Y%m%d-%H%M%S)}"
-# A pre-release by default: nothing is a Sentia release until it has passed the
-# install acceptance tests, and publishing an artifact is not that claim.
-prerelease_flag="--prerelease"
-[[ "${SENTIA_RELEASE_FINAL:-0}" == "1" ]] && prerelease_flag=""
 
 stage="${SENTIA_BUILDER_ARTIFACTS_DIR}/publish/${tag}"
 rm -rf "${stage}"
@@ -84,16 +146,10 @@ Verify the checksum before writing the image to anything.
 Build metadata: $(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || echo unknown)
 EOF
 
-if gh release view "${tag}" >/dev/null 2>&1; then
-  log "release ${tag} exists; replacing its assets"
-  gh release upload "${tag}" "${stage}"/* --clobber
+if [[ "${mode}" == "stage" ]]; then
+  log "staged ${tag} in ${stage}; upload it with: $0 upload <dir>"
 else
-  log "creating release ${tag}"
-  # shellcheck disable=SC2086  # prerelease_flag is intentionally unquoted
-  gh release create "${tag}" "${stage}"/* \
-    --title "Sentia Linux ISO ${tag}" \
-    --notes-file "${notes}" \
-    ${prerelease_flag}
+  publish_release "${tag}" "${stage}" "${notes}"
 fi
 
 {
@@ -104,4 +160,5 @@ fi
   echo "iso_sha256=${original_sum}"
 } | write_atomic "${MANIFEST_DIR}/publish.txt"
 
-log "published ${tag}: $(gh release view "${tag}" --json url --jq .url)"
+[[ "${mode}" == "stage" ]] ||
+  log "published ${tag}: $(gh release view "${tag}" --json url --jq .url)"

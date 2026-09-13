@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: bootstrap packages repo iso publish-iso test test-rust test-iso test-install test-failure release clean
+.PHONY: bootstrap packages repo iso publish-iso publish-iso-stage test test-rust test-iso test-install test-failure release clean
 
 bootstrap:
 	./build/bootstrap/bootstrap.sh
@@ -16,6 +16,11 @@ iso:
 
 publish-iso:
 	./build/scripts/publish-iso.sh
+
+# Split and verify the ISO without needing a GitHub credential, so a
+# disposable build runner never has to hold one.
+publish-iso-stage:
+	./build/scripts/publish-iso.sh stage
 
 test:
 	./build/scripts/test.sh
