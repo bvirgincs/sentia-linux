@@ -13,10 +13,24 @@ require_tool() {
   }
 }
 
+# The lock is held on file descriptor 9 for as long as the descriptor is open,
+# which for a top-level build script means until it exits. A script that goes on
+# to invoke another builder that takes the same lock must call
+# release_heavy_lock first, or it will wait forever for itself.
 acquire_heavy_lock() {
   mkdir -p "$(dirname "$SENTIA_HEAVY_LOCK")"
   exec 9>"$SENTIA_HEAVY_LOCK"
-  flock 9
+  # Bounded rather than indefinite: a lock that is never granted is a bug, and a
+  # build that hangs silently for hours is much harder to diagnose than one that
+  # stops here and says so.
+  if ! flock -w "${SENTIA_HEAVY_LOCK_TIMEOUT:-7200}" 9; then
+    echo "timed out waiting for the heavy build lock: $SENTIA_HEAVY_LOCK" >&2
+    exit 1
+  fi
+}
+
+release_heavy_lock() {
+  exec 9>&-
 }
 
 run_dpkg_buildpackage() {

@@ -31,6 +31,9 @@ build_rust_stack() {
 
   acquire_heavy_lock
   run_dpkg_buildpackage "$source_dir" "$BUILD_MODE"
+  # build_llama_deb.sh takes the same lock, so it must be free before this
+  # function returns.
+  release_heavy_lock
   copy_deb_outputs "$work_root/packaging" "$output_dir"
 }
 

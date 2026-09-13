@@ -27,5 +27,11 @@ require_tools() {
 
 run_with_heavy_lock() {
   local cmd=("$@")
-  flock "${SENTIA_HEAVY_LOCK}" "${cmd[@]}"
+  if ! flock -w "${SENTIA_HEAVY_LOCK_TIMEOUT:-7200}" "${SENTIA_HEAVY_LOCK}" "${cmd[@]}"; then
+    local status=$?
+    if (( status == 1 )); then
+      echo "timed out waiting for the heavy build lock: ${SENTIA_HEAVY_LOCK}" >&2
+    fi
+    return "${status}"
+  fi
 }
