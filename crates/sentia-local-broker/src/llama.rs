@@ -210,6 +210,10 @@ impl LlamaClient {
         let mut sse = Vec::new();
         let mut tool_calls = BTreeMap::<usize, ToolCallParts>::new();
         let mut finish_reason = None;
+        // A reasoning model that spends its whole token budget thinking returns
+        // a well-formed response whose content is empty, which would otherwise
+        // reach the user as a blank answer with no explanation.
+        let mut content_seen = false;
         loop {
             let chunk = tokio::select! {
                 _ = cancellation.cancelled() => return Err(cancelled()),
@@ -233,12 +237,15 @@ impl LlamaClient {
                     events,
                     &mut tool_calls,
                     &mut finish_reason,
+                    &mut content_seen,
                 )
                 .await?
                 {
+                    let calls = finish_tool_calls(tool_calls)?;
+                    ensure_answered(content_seen, &calls)?;
                     return Ok(LlamaOutput {
                         finish_reason: finish_reason.unwrap_or_else(|| "stop".to_owned()),
-                        tool_calls: finish_tool_calls(tool_calls)?,
+                        tool_calls: calls,
                     });
                 }
             }
@@ -250,6 +257,7 @@ impl LlamaClient {
                 events,
                 &mut tool_calls,
                 &mut finish_reason,
+                &mut content_seen,
             )
             .await?;
         }
@@ -260,11 +268,29 @@ impl LlamaClient {
                 retryable: true,
             });
         }
+        let calls = finish_tool_calls(tool_calls)?;
+        ensure_answered(content_seen, &calls)?;
         Ok(LlamaOutput {
             finish_reason: finish_reason.expect("checked above"),
-            tool_calls: finish_tool_calls(tool_calls)?,
+            tool_calls: calls,
         })
     }
+}
+
+/// A response that carries neither text nor a tool call is a failure, not an
+/// empty answer. The most likely cause is a reasoning model configured to
+/// think: its words land in `reasoning_content`, which is not an answer.
+fn ensure_answered(content_seen: bool, tool_calls: &[BrokerToolCall]) -> Result<(), LlamaError> {
+    if content_seen || !tool_calls.is_empty() {
+        return Ok(());
+    }
+    Err(LlamaError {
+        kind: ProviderErrorCode::MalformedResponse,
+        message: "local inference produced no answer; if the model is a reasoning \
+model, set SENTIA_REASONING=off or raise the token budget"
+            .to_owned(),
+        retryable: false,
+    })
 }
 
 fn build_chat_body(
@@ -565,6 +591,7 @@ async fn process_sse_event(
     events: &mpsc::Sender<BrokerEvent>,
     tool_calls: &mut BTreeMap<usize, ToolCallParts>,
     finish_reason: &mut Option<String>,
+    content_seen: &mut bool,
 ) -> Result<bool, LlamaError> {
     let text = std::str::from_utf8(event).map_err(|_| LlamaError {
         kind: ProviderErrorCode::MalformedResponse,
@@ -606,6 +633,7 @@ async fn process_sse_event(
     let delta = choice.get("delta").unwrap_or(&Value::Null);
     if let Some(content) = delta.get("content").and_then(Value::as_str) {
         if !content.is_empty() {
+            *content_seen = true;
             events
                 .send(BrokerEvent::Delta {
                     version: BROKER_PROTOCOL_VERSION.to_owned(),
@@ -686,8 +714,10 @@ async fn parse_non_stream_response(
             retryable: false,
         })?;
     let message = choice.get("message").unwrap_or(&Value::Null);
+    let mut content_seen = false;
     if let Some(content) = message.get("content").and_then(Value::as_str) {
         if !content.is_empty() {
+            content_seen = true;
             events
                 .send(BrokerEvent::Delta {
                     version: BROKER_PROTOCOL_VERSION.to_owned(),
@@ -729,6 +759,7 @@ async fn parse_non_stream_response(
             });
         }
     }
+    ensure_answered(content_seen, &calls)?;
     Ok(LlamaOutput {
         finish_reason: choice
             .get("finish_reason")
@@ -927,5 +958,18 @@ mod tests {
         server.await.unwrap();
         fs::remove_file(socket).unwrap();
         fs::remove_dir(directory).unwrap();
+    }
+    #[tokio::test]
+    async fn reasoning_only_response_is_an_error_not_a_blank_answer() {
+        // Granite 4.2 thinks by default, and a truncated thought leaves
+        // content empty while reasoning_content holds the text. Users must see
+        // a reason rather than nothing at all.
+        let body = br#"{"choices":[{"message":{"content":"","reasoning_content":"the user wants lsof"},"finish_reason":"length"}]}"#;
+        let (tx, _rx) = mpsc::channel(8);
+        let error = parse_non_stream_response("test-request", body, &tx)
+            .await
+            .expect_err("a response with no answer must fail");
+        assert_eq!(error.kind, ProviderErrorCode::MalformedResponse);
+        assert!(error.message.contains("no answer"), "{}", error.message);
     }
 }
