@@ -277,23 +277,47 @@ for iface in $(ls /sys/class/net | grep -v '^lo$'); do
 done
 ai_user="${SENTIA_TEST_USER:-user}"
 ai_uid="$(id -u "${ai_user}")"
+
 # This script runs as the live user over the serial console, so runuser is not
-# available to it; sudo is the path live-config grants. The exit status is the
-# result, not a keyword search of the output: an earlier version accepted
-# "runuser: may not be used by non-root users" as an answer.
-if [[ "$(id -u)" == "${ai_uid}" ]]; then
-  ai_output="$(XDG_RUNTIME_DIR="/run/user/${ai_uid}" timeout 600 \
-    ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1)"
-  ai_status=$?
+# available to it; sudo is the path live-config grants.
+as_ai_user() {
+  if [[ "$(id -u)" == "${ai_uid}" ]]; then
+    env XDG_RUNTIME_DIR="/run/user/${ai_uid}" \
+      DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${ai_uid}/bus" "$@"
+  else
+    sudo -n -u "${ai_user}" env XDG_RUNTIME_DIR="/run/user/${ai_uid}" \
+      DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${ai_uid}/bus" "$@"
+  fi
+}
+
+# LIVE-NO-FAILED-USER-UNITS: the router is a user unit, so the system manager's
+# failed-unit list says nothing about it. A failed user unit was invisible to
+# every check here until it showed up as a refused connection.
+failed_user="$(as_ai_user systemctl --user --failed --no-legend 2>&1 |
+  awk '{print $1}' | tr '\n' ' ')"
+if [[ -z "${failed_user// /}" ]]; then
+  check LIVE-NO-FAILED-USER-UNITS "none" PASS
 else
-  ai_output="$(sudo -n -u "${ai_user}" env XDG_RUNTIME_DIR="/run/user/${ai_uid}" timeout 600 \
-    ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1)"
-  ai_status=$?
+  check LIVE-NO-FAILED-USER-UNITS "${failed_user}" FAIL
 fi
+
+# The exit status is the result, not a keyword search of the output: an earlier
+# version accepted "runuser: may not be used by non-root users" as an answer.
+ai_output="$(as_ai_user timeout 600 \
+  ai --policy LOCAL_ONLY 'name the command that lists open files' 2>&1)"
+ai_status=$?
 if [[ "${ai_status}" -eq 0 && -n "${ai_output//[[:space:]]/}" ]]; then
   check AI-OFFLINE-ANSWER "${ai_output:0:300}" PASS
 else
   check AI-OFFLINE-ANSWER "status=${ai_status} ${ai_output:0:300}" FAIL
+  # A refused router connection costs a whole boot cycle to diagnose without
+  # this, and the reason is almost always in the user manager's own journal.
+  echo "--- sentia-router diagnostics ---"
+  as_ai_user systemctl --user status sentia-router.socket sentia-router.service \
+    --no-pager -l 2>&1 | head -40 || true
+  as_ai_user journalctl --user -u sentia-router.service -u sentia-router.socket \
+    -b --no-pager -n 60 2>&1 | tail -60 || true
+  echo "--- end sentia-router diagnostics ---"
 fi
 for iface in $(ls /sys/class/net | grep -v '^lo$'); do
   ip link set "${iface}" up 2>/dev/null || true
